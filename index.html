@@ -395,7 +395,6 @@ display:none;
 }
 
 @media(max-width:700px){
-
 .editor-layout{
 grid-template-columns:1fr;
 }
@@ -408,7 +407,6 @@ grid-template-columns:1fr;
 button.action{
 width:100%;
 }
-
 }
 </style>
 </head>
@@ -757,6 +755,7 @@ function showText(path,text){
 editorContent.innerHTML="";
 
 const textarea=document.createElement("textarea");
+
 textarea.value=text;
 textarea.id="editorTextarea";
 
@@ -856,6 +855,7 @@ const folders=[...node.folders.keys()].sort((a,b)=>a.localeCompare(b));
 const files=[...node.files].sort((a,b)=>a.localeCompare(b));
 
 for(const folderName of folders){
+
 const fullPath=parentPath
 ?parentPath+"/"+folderName
 :folderName;
@@ -902,6 +902,7 @@ depth+1
 }
 
 for(const file of files){
+
 const fullPath=parentPath
 ?parentPath+"/"+file
 :file;
@@ -936,7 +937,9 @@ await openFile(fullPath);
 fragment.appendChild(button);
 
 if(selectedPath===fullPath){
+
 const box=document.createElement("div");
+
 box.className="file-operations";
 
 const move=document.createElement("button");
@@ -1162,6 +1165,7 @@ moveModePath="";
 
 editorTitle.textContent="編集";
 editorPath.textContent="";
+
 editorContent.innerHTML=`
 <div class="editor-empty">
 ファイル構成から項目をタップしてください
@@ -1242,7 +1246,10 @@ async function uploadFiles(files){
 if(!zip)return;
 
 for(const file of files){
-let path=normalizePath(file.webkitRelativePath||file.name);
+
+let path=normalizePath(
+file.webkitRelativePath||file.name
+);
 
 if(!path)continue;
 
@@ -1270,10 +1277,12 @@ if(!zip)return;
 const removeList=[];
 
 zip.forEach((path,entry)=>{
+
 const normalized=normalizePath(path);
 const parts=normalized.split("/");
 
 for(const part of parts){
+
 if(part.startsWith("__")){
 removeList.push(normalized);
 break;
@@ -1287,6 +1296,7 @@ part==="Desktop.ini"
 removeList.push(normalized);
 break;
 }
+
 }
 });
 
@@ -1294,6 +1304,57 @@ const unique=[...new Set(removeList)];
 
 for(const path of unique){
 zip.remove(path);
+}
+}
+
+async function moveRPToRoot(){
+if(!zip)return;
+
+const moves=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir)return;
+
+const normalized=normalizePath(path);
+const parts=normalized.split("/");
+
+const rpIndex=parts.findIndex(part=>part==="RP");
+
+if(rpIndex===-1)return;
+
+if(rpIndex===0)return;
+
+const newParts=[
+"RP",
+...parts.slice(0,rpIndex),
+...parts.slice(rpIndex+1)
+];
+
+const newPath=newParts.join("/");
+
+if(newPath===normalized)return;
+
+moves.push({
+oldPath:normalized,
+newPath
+});
+});
+
+for(const move of moves){
+
+if(zip.file(move.newPath)){
+continue;
+}
+
+const entry=zip.file(move.oldPath);
+
+if(!entry)continue;
+
+const data=await entry.async("uint8array");
+
+zip.remove(move.oldPath);
+zip.file(move.newPath,data);
 }
 }
 
@@ -1315,6 +1376,7 @@ names.push(normalizePath(path));
 const roots=new Set();
 
 for(const path of names){
+
 const first=path.split("/")[0];
 
 if(path.includes("/")){
@@ -1332,6 +1394,7 @@ return addonDetected;
 }
 
 async function readPack(){
+
 const file=fileInput.files[0];
 
 if(!file)return;
@@ -1348,9 +1411,13 @@ zip=await JSZip.loadAsync(data);
 
 removeUnnecessaryFiles();
 
+await moveRPToRoot();
+
 selectedPath="";
 selectedType="";
 moveModePath="";
+
+openFolders.clear();
 
 editorTitle.textContent="編集";
 editorPath.textContent="";
@@ -1399,6 +1466,7 @@ alert("ファイルの読み込みに失敗しました。");
 }
 
 async function downloadBlob(blob,name){
+
 const url=URL.createObjectURL(blob);
 
 const a=document.createElement("a");
@@ -1418,6 +1486,7 @@ URL.revokeObjectURL(url);
 }
 
 async function downloadSelectedFile(){
+
 if(!zip||!selectedPath)return;
 
 const entry=zip.file(selectedPath);
@@ -1433,6 +1502,7 @@ baseName(selectedPath)
 }
 
 async function makeZip(){
+
 if(!zip)return null;
 
 return await zip.generateAsync({
@@ -1445,6 +1515,7 @@ level:6
 }
 
 async function downloadZip(){
+
 if(!zip)return;
 
 const blob=await makeZip();
@@ -1456,6 +1527,7 @@ outputName.replace(/\.(mcaddon|mcpack|zip)$/i,"")+".zip"
 }
 
 async function downloadMcPack(){
+
 if(!zip)return;
 
 const blob=await makeZip();
@@ -1492,6 +1564,7 @@ newFileInput.click();
 };
 
 newFileInput.addEventListener("change",async()=>{
+
 if(newFileInput.files.length){
 await uploadFiles([...newFileInput.files]);
 }
@@ -1512,6 +1585,7 @@ downloadMcPack();
 };
 
 document.addEventListener("keydown",async e=>{
+
 if(!zip||!selectedPath)return;
 
 const tag=document.activeElement?.tagName?.toLowerCase();
@@ -1519,8 +1593,11 @@ const tag=document.activeElement?.tagName?.toLowerCase();
 if(tag==="textarea"||tag==="input")return;
 
 if(e.key==="Delete"||e.key==="Backspace"){
+
 e.preventDefault();
+
 await deleteSelected();
+
 }
 });
 
