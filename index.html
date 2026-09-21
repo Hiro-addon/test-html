@@ -647,11 +647,13 @@ let moveModePath="";
 let moveTargetFolder="";
 
 function normalizePath(path){
-return String(path||"")
+const p=String(path||"")
 .replace(/\\/g,"/")
 .replace(/^\/+/,"")
 .replace(/\/+/g,"/")
 .replace(/^\.\//,"");
+
+return p;
 }
 
 function baseName(path){
@@ -788,7 +790,7 @@ editorContent.innerHTML=`
 
 <div class="image-transform" id="imageTransform">
 
-<img id="previewImage" src="${imageObjectUrl}">
+<img id="previewImage">
 
 </div>
 
@@ -796,6 +798,10 @@ editorContent.innerHTML=`
 
 </div>
 `;
+
+const img=document.getElementById("previewImage");
+
+img.src=imageObjectUrl;
 
 resetImage();
 
@@ -814,28 +820,49 @@ let startY=0;
 let startPX=0;
 let startPY=0;
 
+const pointers=new Map();
+
 let pinchStartDistance=0;
 let pinchStartScale=1;
+let pinchStartCenterX=0;
+let pinchStartCenterY=0;
+let pinchStartImageX=0;
+let pinchStartImageY=0;
 
-function getTouchDistance(e){
+function getPointerDistance(a,b){
 
-if(e.touches.length<2)return 0;
-
-const a=e.touches[0];
-const b=e.touches[1];
-
-const dx=a.clientX-b.clientX;
-const dy=a.clientY-b.clientY;
+const dx=a.x-b.x;
+const dy=a.y-b.y;
 
 return Math.sqrt(dx*dx+dy*dy);
 
 }
 
+function getPointerCenter(a,b){
+
+return {
+x:(a.x+b.x)/2,
+y:(a.y+b.y)/2
+};
+
+}
+
 canvas.addEventListener("pointerdown",e=>{
 
-if(e.pointerType==="touch"){
+e.preventDefault();
 
-if(e.isPrimary){
+pointers.set(e.pointerId,{
+x:e.clientX,
+y:e.clientY
+});
+
+try{
+
+canvas.setPointerCapture(e.pointerId);
+
+}catch{}
+
+if(pointers.size===1){
 
 dragging=true;
 
@@ -844,98 +871,53 @@ startY=e.clientY;
 
 startPX=imageState.x;
 startPY=imageState.y;
-
-}
-
-canvas.setPointerCapture(e.pointerId);
 
 return;
 
 }
 
-dragging=true;
+if(pointers.size===2){
 
-startX=e.clientX;
-startY=e.clientY;
+const pts=[...pointers.values()];
 
-startPX=imageState.x;
-startPY=imageState.y;
+const a=pts[0];
+const b=pts[1];
 
-canvas.setPointerCapture(e.pointerId);
+pinchStartDistance=getPointerDistance(a,b);
+
+pinchStartScale=imageState.scale;
+
+const center=getPointerCenter(a,b);
+
+pinchStartCenterX=center.x;
+pinchStartCenterY=center.y;
+
+pinchStartImageX=imageState.x;
+pinchStartImageY=imageState.y;
+
+dragging=false;
+
+}
 
 });
 
 canvas.addEventListener("pointermove",e=>{
 
-if(e.pointerType==="touch"){
+if(!pointers.has(e.pointerId))return;
 
-return;
-
-}
-
-if(!dragging)return;
-
-imageState.x=startPX+(e.clientX-startX);
-imageState.y=startPY+(e.clientY-startY);
-
-updateImageTransform();
-
+pointers.set(e.pointerId,{
+x:e.clientX,
+y:e.clientY
 });
 
-canvas.addEventListener("pointerup",e=>{
+if(pointers.size===2){
 
-if(e.pointerType==="touch"){
+const pts=[...pointers.values()];
 
-dragging=false;
+const a=pts[0];
+const b=pts[1];
 
-return;
-
-}
-
-dragging=false;
-
-});
-
-canvas.addEventListener("pointercancel",e=>{
-
-dragging=false;
-
-});
-
-canvas.addEventListener("touchstart",e=>{
-
-if(e.touches.length===2){
-
-e.preventDefault();
-
-dragging=false;
-
-pinchStartDistance=getTouchDistance(e);
-pinchStartScale=imageState.scale;
-
-}
-
-else if(e.touches.length===1){
-
-dragging=true;
-
-startX=e.touches[0].clientX;
-startY=e.touches[0].clientY;
-
-startPX=imageState.x;
-startPY=imageState.y;
-
-}
-
-},{passive:false});
-
-canvas.addEventListener("touchmove",e=>{
-
-if(e.touches.length===2){
-
-e.preventDefault();
-
-const distance=getTouchDistance(e);
+const distance=getPointerDistance(a,b);
 
 if(!pinchStartDistance)return;
 
@@ -949,62 +931,105 @@ pinchStartScale*ratio
 )
 );
 
+const center=getPointerCenter(a,b);
+
+const rect=canvas.getBoundingClientRect();
+
+const originX=rect.width/2;
+const originY=rect.height/2;
+
+const currentCenterX=center.x-rect.left;
+const currentCenterY=center.y-rect.top;
+
+const startCenterX=pinchStartCenterX-rect.left;
+const startCenterY=pinchStartCenterY-rect.top;
+
+const scaleRatio=
+imageState.scale/pinchStartScale;
+
+imageState.x=
+currentCenterX-originX-
+(startCenterX-originX-pinchStartImageX)*
+scaleRatio;
+
+imageState.y=
+currentCenterY-originY-
+(startCenterY-originY-pinchStartImageY)*
+scaleRatio;
+
 updateImageTransform();
 
 return;
 
 }
 
-if(e.touches.length===1&&dragging){
+if(pointers.size===1&&dragging){
 
-e.preventDefault();
+imageState.x=
+startPX+(e.clientX-startX);
 
-const touch=e.touches[0];
-
-imageState.x=startPX+(touch.clientX-startX);
-imageState.y=startPY+(touch.clientY-startY);
+imageState.y=
+startPY+(e.clientY-startY);
 
 updateImageTransform();
 
 }
 
-},{passive:false});
+});
 
-canvas.addEventListener("touchend",e=>{
+function pointerEnd(e){
 
-if(e.touches.length===0){
+pointers.delete(e.pointerId);
 
-dragging=false;
-pinchStartDistance=0;
+try{
 
-}
+canvas.releasePointerCapture(e.pointerId);
 
-else if(e.touches.length===1){
+}catch{}
 
-const touch=e.touches[0];
+if(pointers.size===1){
+
+const remaining=[...pointers.values()][0];
 
 dragging=true;
 
-startX=touch.clientX;
-startY=touch.clientY;
+startX=remaining.x;
+startY=remaining.y;
 
 startPX=imageState.x;
 startPY=imageState.y;
 
-}
-
-});
-
-canvas.addEventListener("touchcancel",()=>{
+}else{
 
 dragging=false;
+
+}
+
+if(pointers.size<2){
+
 pinchStartDistance=0;
 
-});
+}
+
+}
+
+canvas.addEventListener("pointerup",pointerEnd);
+
+canvas.addEventListener("pointercancel",pointerEnd);
 
 canvas.addEventListener("wheel",e=>{
 
 e.preventDefault();
+
+const rect=canvas.getBoundingClientRect();
+
+const mouseX=
+e.clientX-rect.left-rect.width/2;
+
+const mouseY=
+e.clientY-rect.top-rect.height/2;
+
+const oldScale=imageState.scale;
 
 if(e.deltaY<0){
 
@@ -1022,9 +1047,20 @@ imageState.scale/1.1
 
 }
 
+const ratio=
+imageState.scale/oldScale;
+
+imageState.x=
+mouseX-(mouseX-imageState.x)*ratio;
+
+imageState.y=
+mouseY-(mouseY-imageState.y)*ratio;
+
 updateImageTransform();
 
-},{passive:false});
+},{
+passive:false
+});
 
 }
 
