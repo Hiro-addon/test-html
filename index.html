@@ -2321,7 +2321,79 @@ if(!zip){
 addonDetected=false;
 packRoots=[];
 
-return;
+return false;
+
+}
+
+let validManifestCount=0;
+
+const manifests=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir)return;
+
+const normalized=normalizePath(path);
+
+if(
+normalized.toLowerCase()==="manifest.json"||
+normalized.toLowerCase().endsWith("/manifest.json")
+){
+
+manifests.push({
+path:normalized,
+entry:entry
+});
+
+}
+
+});
+
+for(const manifest of manifests){
+
+try{
+
+const text=await manifest.entry.async("string");
+
+const data=JSON.parse(text);
+
+if(
+data&&
+typeof data==="object"&&
+data.header&&
+typeof data.header==="object"&&
+typeof data.header.uuid==="string"&&
+Array.isArray(data.header.version)&&
+data.header.version.length===3&&
+Array.isArray(data.modules)&&
+data.modules.length>0
+){
+
+const validModule=data.modules.some(module=>
+module&&
+typeof module==="object"&&
+typeof module.type==="string"&&
+[
+"resources",
+"data",
+"client_data",
+"interface",
+"world_template",
+"script"
+].includes(module.type)
+);
+
+if(validModule){
+
+validManifestCount++;
+
+}
+
+}
+
+}catch{
+
+}
 
 }
 
@@ -2355,11 +2427,7 @@ roots.add(first);
 
 packRoots=[...roots];
 
-addonDetected=
-names.includes("manifest.json")||
-names.some(
-x=>x.endsWith("/manifest.json")
-);
+addonDetected=validManifestCount>0;
 
 return addonDetected;
 
@@ -2379,7 +2447,117 @@ try{
 
 const data=await file.arrayBuffer();
 
-zip=await JSZip.loadAsync(data);
+const testZip=await JSZip.loadAsync(data);
+
+let validAddon=false;
+
+const manifestFiles=[];
+
+testZip.forEach((path,entry)=>{
+
+if(entry.dir)return;
+
+const normalized=normalizePath(path);
+
+if(
+normalized.toLowerCase()==="manifest.json"||
+normalized.toLowerCase().endsWith("/manifest.json")
+){
+
+manifestFiles.push({
+path:normalized,
+entry:entry
+});
+
+}
+
+});
+
+for(const manifest of manifestFiles){
+
+try{
+
+const text=await manifest.entry.async("string");
+
+const manifestData=JSON.parse(text);
+
+if(
+manifestData&&
+typeof manifestData==="object"&&
+manifestData.header&&
+typeof manifestData.header==="object"&&
+typeof manifestData.header.uuid==="string"&&
+Array.isArray(manifestData.header.version)&&
+manifestData.header.version.length===3&&
+Array.isArray(manifestData.modules)&&
+manifestData.modules.length>0
+){
+
+const validModule=manifestData.modules.some(module=>
+module&&
+typeof module==="object"&&
+typeof module.type==="string"&&
+[
+"resources",
+"data",
+"client_data",
+"interface",
+"world_template",
+"script"
+].includes(module.type)
+);
+
+if(validModule){
+
+validAddon=true;
+break;
+
+}
+
+}
+
+}catch{
+
+}
+
+}
+
+if(!validAddon){
+
+zip=null;
+
+fileTree.innerHTML=`
+<div class="editor-empty">
+Minecraftアドオンではありません
+</div>
+`;
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+manifest.jsonがMinecraft Bedrockアドオンの形式ではありません
+</div>
+`;
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+mcpackButton.disabled=true;
+zipButton.disabled=true;
+
+updateTreeTools();
+
+fileName.textContent="未選択";
+
+alert(
+"Minecraft Bedrockアドオンではないため読み込めません。\n\nmanifest.jsonを確認してください。"
+);
+
+fileInput.value="";
+
+return;
+
+}
+
+zip=testZip;
 
 removeUnnecessaryFiles();
 
