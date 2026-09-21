@@ -1372,7 +1372,7 @@ const fullPath=parentPath
 const button=document.createElement("button");
 
 button.className=
-"tree-item file tree-indent-"+Math.min(depth+1,5);
+"tree-item file tree-indent-"+Math.min(depth,5);
 
 button.dataset.path=fullPath;
 button.dataset.folder="false";
