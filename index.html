@@ -497,7 +497,6 @@ MCAddon / MCPack / ZIPを選択
 id="fileInput"
 class="file-input"
 type="file"
-accept=".mcaddon,.mcpack,.zip,application/zip"
 >
 
 <div class="file-name" id="fileName">
@@ -2440,6 +2439,26 @@ async function readPack(){
 const file=fileInput.files[0];
 
 if(!file)return;
+
+const name=file.name.toLowerCase();
+
+if(
+!name.endsWith(".mcaddon")&&
+!name.endsWith(".mcpack")&&
+!name.endsWith(".zip")
+){
+
+fileInput.value="";
+
+fileName.textContent="未選択";
+
+alert(
+"このファイル形式には対応していません。\n\nMCAddon / MCPack / ZIPを選択してください。"
+);
+
+return;
+
+}
 
 fileName.textContent=file.name;
 
