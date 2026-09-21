@@ -123,7 +123,7 @@ font-weight:bold;
 }
 
 .indent{
-padding-left:28px;
+padding-left:36px;
 }
 
 .editor-path{
@@ -131,6 +131,7 @@ color:#888;
 font-size:12px;
 font-weight:normal;
 margin-left:8px;
+word-break:break-all;
 }
 
 .editor-content{
@@ -160,6 +161,47 @@ color:#ddd;
 font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
 font-size:13px;
 line-height:1.6;
+}
+
+.image-preview{
+min-height:400px;
+padding:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+background:#080808;
+}
+
+.image-preview img{
+display:block;
+max-width:100%;
+max-height:500px;
+width:auto;
+height:auto;
+object-fit:contain;
+image-rendering:auto;
+}
+
+.image-info{
+position:absolute;
+bottom:10px;
+left:10px;
+right:10px;
+padding:8px 10px;
+border-radius:8px;
+background:rgba(0,0,0,.75);
+color:#aaa;
+font-size:12px;
+text-align:center;
+}
+
+.image-preview-wrap{
+position:relative;
+width:100%;
+min-height:360px;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
 .actions{
@@ -294,7 +336,7 @@ const downloadButton=document.getElementById("downloadButton");
 
 let zip=null;
 let selectedPath="";
-let selectedText=false;
+let selectedType="";
 let outputName="edited.zip";
 
 fileInput.onchange=async()=>{
@@ -330,7 +372,7 @@ zip=null;
 
 fileTree.innerHTML=
 '<div class="editor-empty">読み込みに失敗しました<br><br>'+
-error.message+
+escapeHtml(error.message)+
 '</div>';
 
 downloadButton.disabled=true;
@@ -338,6 +380,17 @@ downloadButton.disabled=true;
 }
 
 };
+
+function escapeHtml(value){
+
+return String(value)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
+}
 
 function isText(path){
 
@@ -359,11 +412,41 @@ lower.endsWith(".yaml")
 
 }
 
+function isImage(path){
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".png")||
+lower.endsWith(".jpg")||
+lower.endsWith(".jpeg")||
+lower.endsWith(".webp")||
+lower.endsWith(".gif")
+);
+
+}
+
+function isEditable(path){
+
+return isText(path)||isImage(path);
+
+}
+
 function icon(path){
 
 if(isText(path)){
 return "📄";
 }
+
+if(isImage(path)){
+return "🖼️";
+}
+
+return "📦";
+
+}
+
+function shouldShow(path){
 
 const lower=path.toLowerCase();
 
@@ -371,12 +454,25 @@ if(
 lower.endsWith(".png")||
 lower.endsWith(".jpg")||
 lower.endsWith(".jpeg")||
-lower.endsWith(".webp")
+lower.endsWith(".webp")||
+lower.endsWith(".gif")||
+lower.endsWith(".json")||
+lower.endsWith(".js")||
+lower.endsWith(".mcfunction")||
+lower.endsWith(".lang")||
+lower.endsWith(".txt")||
+lower.endsWith(".md")||
+lower.endsWith(".html")||
+lower.endsWith(".css")||
+lower.endsWith(".xml")||
+lower.endsWith(".yml")||
+lower.endsWith(".yaml")
 ){
-return "🖼️";
+return true;
 }
 
-return "📦";
+return false;
+
 }
 
 function renderTree(){
@@ -391,13 +487,17 @@ if(entry.dir){
 return;
 }
 
+if(!shouldShow(path)){
+return;
+}
+
 paths.push(path);
 
 });
 
 paths.sort();
 
-const folders=new Set();
+const visibleFolders=new Set();
 
 paths.forEach(path=>{
 
@@ -405,7 +505,7 @@ const parts=path.split("/");
 
 for(let i=1;i<parts.length;i++){
 
-folders.add(
+visibleFolders.add(
 parts.slice(0,i).join("/")
 );
 
@@ -413,24 +513,57 @@ parts.slice(0,i).join("/")
 
 });
 
-const all=[
-...Array.from(folders).map(path=>({
+const folders=Array.from(visibleFolders);
+
+const all=[];
+
+folders.forEach(path=>{
+
+all.push({
 path:path,
 folder:true
-})),
-...paths.map(path=>({
+});
+
+});
+
+paths.forEach(path=>{
+
+all.push({
 path:path,
 folder:false
-}))
-];
+});
+
+});
 
 all.sort((a,b)=>{
 
-const aa=a.path.split("/").length;
-const bb=b.path.split("/").length;
+const aParts=a.path.split("/");
+const bParts=b.path.split("/");
 
-if(aa!==bb){
-return aa-bb;
+const min=Math.min(aParts.length,bParts.length);
+
+for(let i=0;i<min;i++){
+
+if(aParts[i]!==bParts[i]){
+
+const aIsFolder=
+folders.includes(aParts.slice(0,i+1).join("/"));
+
+const bIsFolder=
+folders.includes(bParts.slice(0,i+1).join("/"));
+
+if(aIsFolder!==bIsFolder){
+return aIsFolder?-1:1;
+}
+
+return aParts[i].localeCompare(bParts[i]);
+
+}
+
+}
+
+if(aParts.length!==bParts.length){
+return aParts.length-bParts.length;
 }
 
 return a.path.localeCompare(b.path);
@@ -446,27 +579,38 @@ button.className="tree-item";
 const depth=
 item.path.split("/").length-1;
 
-if(depth){
+if(depth>0){
 button.classList.add("indent");
 }
 
 const name=
 item.path.split("/").pop();
 
+if(item.folder){
+
+button.classList.add("folder");
+
 button.innerHTML=
-(item.folder?"📁":"")+ 
-(!item.folder?icon(item.path):"")+
-" "+name;
+"📁 "+escapeHtml(name);
 
 button.onclick=()=>{
 
-if(item.folder){
 return;
-}
+
+};
+
+}else{
+
+button.innerHTML=
+icon(item.path)+" "+escapeHtml(name);
+
+button.onclick=()=>{
 
 openFile(item.path);
 
 };
+
+}
 
 fileTree.appendChild(button);
 
@@ -475,7 +619,7 @@ fileTree.appendChild(button);
 if(!all.length){
 
 fileTree.innerHTML=
-'<div class="editor-empty">ファイルがありません</div>';
+'<div class="editor-empty">編集可能なファイルがありません</div>';
 
 }
 
@@ -501,7 +645,7 @@ if(isText(path)){
 const text=
 await entry.async("string");
 
-selectedText=true;
+selectedType="text";
 
 const textarea=
 document.createElement("textarea");
@@ -518,20 +662,67 @@ return;
 
 }
 
-selectedText=false;
+if(isImage(path)){
+
+selectedType="image";
+
+const blob=
+await entry.async("blob");
+
+const url=
+URL.createObjectURL(blob);
+
+editorContent.innerHTML="";
+
+const wrap=
+document.createElement("div");
+
+wrap.className="image-preview";
+
+const inner=
+document.createElement("div");
+
+inner.className="image-preview-wrap";
+
+const img=
+document.createElement("img");
+
+img.src=url;
+
+img.alt=path;
+
+const info=
+document.createElement("div");
+
+info.className="image-info";
+info.textContent="画像プレビュー";
+
+inner.appendChild(img);
+inner.appendChild(info);
+
+wrap.appendChild(inner);
+editorContent.appendChild(wrap);
+
+saveButton.disabled=true;
+
+return;
+
+}
+
+selectedType="other";
 
 saveButton.disabled=true;
 
 editorContent.innerHTML=
 '<div class="editor-empty">'+
-"このファイルはテキスト編集に対応していません。"+
+"このファイルはプレビュー・編集に対応していません。"+
 '</div>';
 
 }
 
 saveButton.onclick=()=>{
 
-if(!zip||!selectedPath||!selectedText){
+if(!zip||!selectedPath||selectedType!=="text"){
 return;
 }
 
