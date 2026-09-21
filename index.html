@@ -2317,22 +2317,50 @@ zip.remove(dir+"/");
 
 async function refreshAddonDetection(){
 
-hasRP=false;
-hasBP=false;
+let hasRP=false;
+let hasBP=false;
+
+if(!zip){
+
 addonDetected=false;
+packRoots=[];
 
-const files=Object.values(fileMap);
+return false;
 
-for(const file of files){
+}
 
-if(file.type!=="file"||!file.path.endsWith("manifest.json")) continue;
+const manifests=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir)return;
+
+const normalized=normalizePath(path);
+
+if(
+normalized.toLowerCase()==="manifest.json"||
+normalized.toLowerCase().endsWith("/manifest.json")
+){
+
+manifests.push({
+path:normalized,
+entry:entry
+});
+
+}
+
+});
+
+for(const item of manifests){
 
 try{
 
-const text=await file.blob.text();
+const text=await item.entry.async("string");
 const manifest=JSON.parse(text);
 
 if(
+!manifest||
+typeof manifest!=="object"||
 !manifest.header||
 typeof manifest.header.uuid!=="string"||
 !Array.isArray(manifest.header.version)||
@@ -2340,7 +2368,9 @@ manifest.header.version.length!==3||
 !Array.isArray(manifest.modules)||
 manifest.modules.length===0
 ){
+
 continue;
+
 }
 
 let isRP=false;
@@ -2348,8 +2378,12 @@ let isBP=false;
 
 for(const module of manifest.modules){
 
+if(!module||typeof module.type!=="string")continue;
+
 if(module.type==="resources"){
+
 isRP=true;
+
 }
 
 if(
@@ -2359,30 +2393,44 @@ module.type==="client_data"||
 module.type==="interface"||
 module.type==="world_template"
 ){
+
 isBP=true;
-}
 
 }
 
-const path=file.path.split("/");
+}
 
-if(path.includes("RP")){
+const parts=item.path.split("/").map(
+part=>part.toUpperCase()
+);
+
+if(parts.includes("RP")){
+
 isRP=true;
+
 }
 
-if(path.includes("BP")){
+if(parts.includes("BP")){
+
 isBP=true;
+
 }
 
 if(isRP){
+
 hasRP=true;
+
 }
 
 if(isBP){
+
 hasBP=true;
+
 }
 
-}catch(e){}
+}catch(e){
+
+}
 
 }
 
@@ -2390,24 +2438,27 @@ addonDetected=hasRP&&hasBP;
 
 packRoots=[];
 
-for(const file of files){
+zip.forEach((path,entry)=>{
 
-const parts=file.path.split("/");
+if(entry.dir)return;
 
-if(parts.length>1){
+const normalized=normalizePath(path);
+const parts=normalized.split("/");
 
-const root=parts[0];
+if(parts.length<2)return;
+
+const root=parts[0].toUpperCase();
 
 if(
-!packRoots.includes(root)&&
-(root==="RP"||root==="BP")
+(root==="RP"||root==="BP")&&
+!packRoots.includes(root)
 ){
+
 packRoots.push(root);
-}
 
 }
 
-}
+});
 
 return addonDetected;
 
