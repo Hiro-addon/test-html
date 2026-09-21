@@ -636,34 +636,6 @@ a.pop();
 return a.join("/");
 }
 
-function isAllowedFile(path){
-const p=normalizePath(path).toLowerCase();
-
-return [
-".json",
-".js",
-".mcfunction",
-".lang",
-".txt",
-".md",
-".xml",
-".html",
-".css",
-".ts",
-".mcmeta",
-".properties",
-".material",
-".render_controller",
-".geo.json",
-".png",
-".jpg",
-".jpeg",
-".webp",
-".gif",
-".svg"
-].some(x=>p.endsWith(x));
-}
-
 function isImage(path){
 return /\.(png|jpe?g|webp|gif|svg)$/i.test(path);
 }
@@ -1024,7 +996,7 @@ await openFile(fullPath);
 
 fragment.appendChild(button);
 
-if(selectedPath===fullPath&&!moveModePath){
+if(!moveModePath){
 
 const box=document.createElement("div");
 
@@ -1038,8 +1010,10 @@ move.onclick=e=>{
 
 e.stopPropagation();
 
-moveModePath=selectedPath;
-moveTargetFolder=directoryName(selectedPath);
+selectedPath=fullPath;
+selectedType=isImage(fullPath)?"image":"text";
+moveModePath=fullPath;
+moveTargetFolder=directoryName(fullPath);
 
 renderTree();
 };
@@ -1049,7 +1023,12 @@ const rename=document.createElement("button");
 rename.textContent="ファイル名変更";
 
 rename.onclick=e=>{
+
 e.stopPropagation();
+
+selectedPath=fullPath;
+selectedType=isImage(fullPath)?"image":"text";
+
 renameSelected();
 };
 
@@ -1058,7 +1037,12 @@ const del=document.createElement("button");
 del.textContent="削除";
 
 del.onclick=e=>{
+
 e.stopPropagation();
+
+selectedPath=fullPath;
+selectedType=isImage(fullPath)?"image":"text";
+
 deleteSelected();
 };
 
@@ -1068,6 +1052,7 @@ box.appendChild(del);
 
 fragment.appendChild(box);
 }
+
 }
 
 }
@@ -1349,7 +1334,9 @@ function createNewFile(){
 
 if(!zip)return;
 
-const name=prompt("新規ファイル名を入力してください");
+const name=prompt(
+"構成ファイル名を入力してください\n例: scripts/main.js / functions/start.mcfunction"
+);
 
 if(!name)return;
 
@@ -1357,9 +1344,14 @@ let path=normalizePath(name);
 
 if(!path)return;
 
-if(!isAllowedFile(path)){
+const parts=path.split("/");
 
-alert("対応していないファイル形式です。");
+if(
+parts.some(part=>part==="."||part==="..")||
+path.endsWith("/")
+){
+
+alert("ファイル名またはパスが不正です。");
 
 return;
 }
@@ -1394,6 +1386,18 @@ if(!path)return;
 
 if(!path.toLowerCase().endsWith(".json")){
 path+=".json";
+}
+
+const parts=path.split("/");
+
+if(
+parts.some(part=>part==="."||part==="..")||
+path.endsWith("/")
+){
+
+alert("ファイル名またはパスが不正です。");
+
+return;
 }
 
 if(zip.file(path)){
@@ -1497,6 +1501,8 @@ async function normalizePackStructure(){
 
 if(!zip)return;
 
+for(const packType of ["RP","BP"]){
+
 const entries=[];
 
 zip.forEach((path,entry)=>{
@@ -1510,10 +1516,6 @@ entries.push(normalized);
 }
 
 });
-
-const packTypes=["RP","BP"];
-
-for(const packType of packTypes){
 
 const candidates=entries.filter(path=>{
 
@@ -1555,23 +1557,6 @@ packRoot=candidate;
 
 if(!packRoot)continue;
 
-const manifestCandidates=entries.filter(path=>{
-
-const parts=path.split("/");
-
-const packIndex=parts.findIndex(
-part=>part.toUpperCase()===packType
-);
-
-return (
-packIndex>=0&&
-parts[parts.length-1].toLowerCase()==="manifest.json"
-);
-
-});
-
-if(!manifestCandidates.length)continue;
-
 const packEntries=entries.filter(path=>{
 
 return (
@@ -1581,7 +1566,43 @@ path.startsWith(packRoot+"/")
 
 });
 
-const packIndex=packRoot.split("/").length-1;
+const manifestCandidates=packEntries.filter(path=>{
+
+const parts=path.split("/");
+
+const index=parts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+return (
+index>=0&&
+parts[parts.length-1].toLowerCase()==="manifest.json"
+);
+
+});
+
+let wrapperParts=[];
+
+if(manifestCandidates.length){
+
+const manifestPath=manifestCandidates
+.sort((a,b)=>a.length-b.length)[0];
+
+const parts=manifestPath.split("/");
+
+const index=parts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+if(index>=0){
+
+wrapperParts=parts.slice(
+index+1,
+parts.length-1
+);
+
+}
+}
 
 for(const oldPath of packEntries){
 
@@ -1593,9 +1614,33 @@ part=>part.toUpperCase()===packType
 
 if(index<0)continue;
 
-const newPath=parts
-.slice(index)
-.join("/");
+let relativeParts=parts.slice(index+1);
+
+if(wrapperParts.length){
+
+let matches=true;
+
+for(let i=0;i<wrapperParts.length;i++){
+
+if(relativeParts[i]!==wrapperParts[i]){
+matches=false;
+break;
+}
+
+}
+
+if(matches){
+
+relativeParts=relativeParts.slice(
+wrapperParts.length
+);
+
+}
+}
+
+const newPath=relativeParts.length
+?packType+"/"+relativeParts.join("/")
+:packType;
 
 if(oldPath===newPath)continue;
 
