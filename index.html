@@ -757,6 +757,7 @@ function showText(path,text){
 editorContent.innerHTML="";
 
 const textarea=document.createElement("textarea");
+
 textarea.value=text;
 textarea.id="editorTextarea";
 
@@ -812,10 +813,13 @@ entries.push(normalized);
 entries.sort((a,b)=>a.localeCompare(b));
 
 for(const path of entries){
+
 const parts=path.split("/");
+
 let node=root;
 
 for(let i=0;i<parts.length-1;i++){
+
 const part=parts[i];
 
 if(!node.folders.has(part)){
@@ -836,6 +840,7 @@ return root;
 
 function renderTree(){
 if(!zip){
+
 fileTree.innerHTML=`
 <div class="editor-empty">
 ファイルを選択してください
@@ -852,10 +857,15 @@ fileTree.innerHTML="";
 const fragment=document.createDocumentFragment();
 
 function renderNode(node,parentPath,depth){
-const folders=[...node.folders.keys()].sort((a,b)=>a.localeCompare(b));
-const files=[...node.files].sort((a,b)=>a.localeCompare(b));
+
+const folders=[...node.folders.keys()]
+.sort((a,b)=>a.localeCompare(b));
+
+const files=[...node.files]
+.sort((a,b)=>a.localeCompare(b));
 
 for(const folderName of folders){
+
 const fullPath=parentPath
 ?parentPath+"/"+folderName
 :folderName;
@@ -893,15 +903,18 @@ renderTree();
 fragment.appendChild(button);
 
 if(open){
+
 renderNode(
 node.folders.get(folderName),
 fullPath,
 depth+1
 );
+
 }
 }
 
 for(const file of files){
+
 const fullPath=parentPath
 ?parentPath+"/"+file
 :file;
@@ -936,7 +949,9 @@ await openFile(fullPath);
 fragment.appendChild(button);
 
 if(selectedPath===fullPath){
+
 const box=document.createElement("div");
+
 box.className="file-operations";
 
 const move=document.createElement("button");
@@ -1003,6 +1018,7 @@ return String(value)
 }
 
 async function openFile(path){
+
 if(!zip)return;
 
 path=normalizePath(path);
@@ -1023,17 +1039,26 @@ fileDownloadButton.disabled=false;
 renderTree();
 
 if(isImage(path)){
+
 const data=await entry.async("uint8array");
+
 showImage(data,path);
+
 return;
 }
 
 if(isText(path)){
+
 try{
+
 const text=await entry.async("string");
+
 showText(path,text);
+
 }catch{
+
 showEmpty();
+
 }
 
 return;
@@ -1043,6 +1068,7 @@ showEmpty();
 }
 
 async function moveSelectedFile(targetFolder){
+
 if(!zip||!selectedPath)return;
 
 const source=normalizePath(selectedPath);
@@ -1055,27 +1081,36 @@ const newPath=target
 :name;
 
 if(newPath===source){
+
 moveModePath="";
+
 renderTree();
+
 return;
 }
 
 if(zip.file(newPath)){
+
 alert("同名のファイルが存在します。");
+
 return;
 }
 
 const entry=zip.file(source);
 
 if(!entry){
+
 moveModePath="";
+
 renderTree();
+
 return;
 }
 
 const data=await entry.async("uint8array");
 
 zip.remove(source);
+
 zip.file(newPath,data);
 
 selectedPath=newPath;
@@ -1089,6 +1124,7 @@ await openFile(newPath);
 }
 
 async function renameSelected(){
+
 if(!zip||!selectedPath)return;
 
 const oldPath=normalizePath(selectedPath);
@@ -1108,7 +1144,9 @@ if(!newName)return;
 newName=newName.replace(/[\\\/]/g,"");
 
 if(!newName){
+
 alert("ファイル名が不正です。");
+
 return;
 }
 
@@ -1121,7 +1159,9 @@ const newPath=directory
 if(newPath===oldPath)return;
 
 if(zip.file(newPath)){
+
 alert("同名のファイルが存在します。");
+
 return;
 }
 
@@ -1132,6 +1172,7 @@ if(!entry)return;
 const data=await entry.async("uint8array");
 
 zip.remove(oldPath);
+
 zip.file(newPath,data);
 
 selectedPath=newPath;
@@ -1144,6 +1185,7 @@ await openFile(newPath);
 }
 
 async function deleteSelected(){
+
 if(!zip||!selectedPath)return;
 
 const path=selectedPath;
@@ -1178,6 +1220,7 @@ renderTree();
 }
 
 function createNewFile(){
+
 if(!zip)return;
 
 const name=prompt("新規ファイル名を入力してください");
@@ -1189,12 +1232,16 @@ let path=normalizePath(name);
 if(!path)return;
 
 if(!isAllowedFile(path)){
+
 alert("対応していないファイル形式です。");
+
 return;
 }
 
 if(zip.file(path)){
+
 alert("同名のファイルが存在します。");
+
 return;
 }
 
@@ -1208,6 +1255,7 @@ renderTree();
 }
 
 function createNewJson(){
+
 if(!zip)return;
 
 const name=prompt("新規JSONファイル名を入力してください");
@@ -1223,7 +1271,9 @@ path+=".json";
 }
 
 if(zip.file(path)){
+
 alert("同名のファイルが存在します。");
+
 return;
 }
 
@@ -1240,9 +1290,11 @@ renderTree();
 }
 
 async function uploadFiles(files){
+
 if(!zip)return;
 
 for(const file of files){
+
 let path=normalizePath(
 file.webkitRelativePath||file.name
 );
@@ -1250,6 +1302,7 @@ file.webkitRelativePath||file.name
 if(!path)continue;
 
 if(zip.file(path)){
+
 const overwrite=confirm(
 `「${path}」は既に存在します。\n上書きしますか？`
 );
@@ -1259,7 +1312,10 @@ if(!overwrite)continue;
 
 const data=await file.arrayBuffer();
 
-zip.file(path,new Uint8Array(data));
+zip.file(
+path,
+new Uint8Array(data)
+);
 }
 
 await refreshAddonDetection();
@@ -1268,11 +1324,13 @@ renderTree();
 }
 
 function removeUnnecessaryFiles(){
+
 if(!zip)return;
 
 const removeList=[];
 
 zip.forEach((path,entry)=>{
+
 const normalized=normalizePath(path);
 
 if(!normalized)return;
@@ -1282,7 +1340,9 @@ const parts=normalized.split("/");
 for(const part of parts){
 
 if(part.startsWith("__")){
+
 removeList.push(normalized);
+
 break;
 }
 
@@ -1291,7 +1351,9 @@ part===".DS_Store"||
 part==="Thumbs.db"||
 part==="Desktop.ini"
 ){
+
 removeList.push(normalized);
+
 break;
 }
 
@@ -1305,84 +1367,224 @@ zip.remove(path);
 }
 }
 
-function moveRPToFront(){
+async function normalizePackStructure(){
+
 if(!zip)return;
 
-const moveList=[];
+const entries=[];
 
 zip.forEach((path,entry)=>{
+
 if(entry.dir)return;
 
 const normalized=normalizePath(path);
 
-if(!normalized)return;
+if(normalized){
+entries.push(normalized);
+}
 
-const parts=normalized.split("/");
+});
 
-const rpIndex=parts.findIndex(
-part=>part.toLowerCase()==="rp"
+const packTypes=["RP","BP"];
+
+for(const packType of packTypes){
+
+const rootCandidates=entries.filter(path=>{
+const parts=path.split("/");
+
+return parts.some(
+part=>part.toUpperCase()===packType
+);
+});
+
+if(!rootCandidates.length)continue;
+
+let packRoot="";
+
+for(const path of rootCandidates){
+
+const parts=path.split("/");
+
+const index=parts.findIndex(
+part=>part.toUpperCase()===packType
 );
 
-if(rpIndex===-1)return;
+if(index<0)continue;
 
-if(rpIndex===0)return;
+const candidate=parts
+.slice(0,index+1)
+.join("/");
 
-const newPath=[
-parts[rpIndex],
-...parts.slice(0,rpIndex),
-...parts.slice(rpIndex+1)
-].join("/");
+if(!packRoot||candidate.length<packRoot.length){
+packRoot=candidate;
+}
+}
 
-if(newPath===normalized)return;
+if(!packRoot)continue;
 
-moveList.push({
-oldPath:normalized,
-newPath:newPath
+const sourceEntries=entries.filter(path=>{
+return path===packRoot||
+path.startsWith(packRoot+"/");
 });
+
+const manifestCandidates=sourceEntries.filter(path=>{
+return baseName(path).toLowerCase()==="manifest.json";
 });
 
-for(const item of moveList){
+if(!manifestCandidates.length)continue;
+
+let manifestPath=manifestCandidates
+.sort((a,b)=>a.length-b.length)[0];
+
+const manifestParts=manifestPath.split("/");
+
+const rootParts=packRoot.split("/");
+
+const manifestIndex=manifestParts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+if(manifestIndex<0)continue;
+
+const afterPack=manifestParts.slice(manifestIndex+1,-1);
+
+let stripCount=afterPack.length;
+
+if(stripCount>0){
+
+const wrapper=afterPack.join("/");
+
+const wrapperPrefix=packRoot+"/"+wrapper+"/";
+
+const wrapperEntries=sourceEntries.filter(path=>{
+return path===packRoot+"/"+wrapper||
+path.startsWith(wrapperPrefix);
+});
+
+if(wrapperEntries.length>0){
+
+const newEntries=[];
+
+for(const path of entries){
+
+if(path===packRoot+"/"+wrapper){
+continue;
+}
+
+if(path.startsWith(wrapperPrefix)){
+
+const rest=path.slice(wrapperPrefix.length);
+
+newEntries.push({
+oldPath:path,
+newPath:packRoot+"/"+rest
+});
+
+}
+}
+
+for(const item of newEntries){
 
 const entry=zip.file(item.oldPath);
 
 if(!entry)continue;
 
-if(zip.file(item.newPath)){
-continue;
-}
+const data=await entry.async("uint8array");
 
-zip.file(
-item.newPath,
-entry
-);
+if(!zip.file(item.newPath)){
+zip.file(item.newPath,data);
+}
 
 zip.remove(item.oldPath);
 }
+
+}
+}
+
+const refreshed=[];
+
+zip.forEach((path,entry)=>{
+
+if(!entry.dir){
+
+refreshed.push(
+normalizePath(path)
+);
+
+}
+});
+
+const actualPackPaths=refreshed.filter(path=>{
+return path===packRoot||
+path.startsWith(packRoot+"/");
+});
+
+for(const oldPath of actualPackPaths){
+
+const parts=oldPath.split("/");
+
+const index=parts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+if(index<0)continue;
+
+const newPath=parts
+.slice(index)
+.join("/");
+
+if(oldPath===newPath)continue;
+
+const entry=zip.file(oldPath);
+
+if(!entry)continue;
+
+const data=await entry.async("uint8array");
+
+if(!zip.file(newPath)){
+zip.file(newPath,data);
+}
+
+zip.remove(oldPath);
+}
+
+}
+
 }
 
 async function refreshAddonDetection(){
+
 if(!zip){
+
 addonDetected=false;
 packRoots=[];
+
 return;
 }
 
 const names=[];
 
 zip.forEach((path,entry)=>{
+
 if(!entry.dir){
-names.push(normalizePath(path));
+
+names.push(
+normalizePath(path)
+);
+
 }
 });
 
 const roots=new Set();
 
 for(const path of names){
+
 const first=path.split("/")[0];
 
 if(path.includes("/")){
 roots.add(first);
 }
+
 }
 
 packRoots=[...roots];
@@ -1395,6 +1597,7 @@ return addonDetected;
 }
 
 async function readPack(){
+
 const file=fileInput.files[0];
 
 if(!file)return;
@@ -1411,12 +1614,11 @@ zip=await JSZip.loadAsync(data);
 
 removeUnnecessaryFiles();
 
-moveRPToFront();
+await normalizePackStructure();
 
 selectedPath="";
 selectedType="";
 moveModePath="";
-openFolders.clear();
 
 editorTitle.textContent="編集";
 editorPath.textContent="";
@@ -1435,6 +1637,7 @@ zipButton.disabled=false;
 await refreshAddonDetection();
 
 renderTree();
+
 updateTreeTools();
 
 }catch(error){
@@ -1465,6 +1668,7 @@ alert("ファイルの読み込みに失敗しました。");
 }
 
 async function downloadBlob(blob,name){
+
 const url=URL.createObjectURL(blob);
 
 const a=document.createElement("a");
@@ -1484,6 +1688,7 @@ URL.revokeObjectURL(url);
 }
 
 async function downloadSelectedFile(){
+
 if(!zip||!selectedPath)return;
 
 const entry=zip.file(selectedPath);
@@ -1499,6 +1704,7 @@ baseName(selectedPath)
 }
 
 async function makeZip(){
+
 if(!zip)return null;
 
 return await zip.generateAsync({
@@ -1511,27 +1717,30 @@ level:6
 }
 
 async function downloadZip(){
-if(!zip)return;
 
-moveRPToFront();
+if(!zip)return;
 
 const blob=await makeZip();
 
 await downloadBlob(
 blob,
-outputName.replace(/\.(mcaddon|mcpack|zip)$/i,"")+".zip"
+outputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+)+".zip"
 );
 }
 
 async function downloadMcPack(){
-if(!zip)return;
 
-moveRPToFront();
+if(!zip)return;
 
 const blob=await makeZip();
 
-let name=outputName
-.replace(/\.(mcaddon|mcpack|zip)$/i,"");
+let name=outputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+);
 
 if(!name){
 name="edited";
@@ -1547,7 +1756,10 @@ name+extension
 );
 }
 
-fileInput.addEventListener("change",readPack);
+fileInput.addEventListener(
+"change",
+readPack
+);
 
 newFileButton.onclick=()=>{
 createNewFile();
@@ -1561,13 +1773,18 @@ uploadButton.onclick=()=>{
 newFileInput.click();
 };
 
-newFileInput.addEventListener("change",async()=>{
+newFileInput.addEventListener(
+"change",
+async()=>{
 if(newFileInput.files.length){
-await uploadFiles([...newFileInput.files]);
+await uploadFiles(
+[...newFileInput.files]
+);
 }
 
 newFileInput.value="";
-});
+}
+);
 
 fileDownloadButton.onclick=()=>{
 downloadSelectedFile();
@@ -1581,22 +1798,39 @@ mcpackButton.onclick=()=>{
 downloadMcPack();
 };
 
-document.addEventListener("keydown",async e=>{
+document.addEventListener(
+"keydown",
+async e=>{
+
 if(!zip||!selectedPath)return;
 
-const tag=document.activeElement?.tagName?.toLowerCase();
+const tag=
+document.activeElement?.tagName?.toLowerCase();
 
-if(tag==="textarea"||tag==="input")return;
+if(
+tag==="textarea"||
+tag==="input"
+)return;
 
-if(e.key==="Delete"||e.key==="Backspace"){
+if(
+e.key==="Delete"||
+e.key==="Backspace"
+){
+
 e.preventDefault();
-await deleteSelected();
-}
-});
 
-window.addEventListener("beforeunload",()=>{
+await deleteSelected();
+
+}
+}
+);
+
+window.addEventListener(
+"beforeunload",
+()=>{
 clearImageUrl();
-});
+}
+);
 </script>
 
 </body>
