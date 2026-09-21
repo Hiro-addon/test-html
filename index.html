@@ -241,6 +241,56 @@ cursor:pointer;
 background:#252525;
 }
 
+.unnecessary-files{
+display:none;
+padding:10px 8px 8px;
+border-top:1px solid #292929;
+}
+
+.unnecessary-files.visible{
+display:block;
+}
+
+.unnecessary-files-title{
+font-size:12px;
+color:#aaa;
+margin-bottom:8px;
+}
+
+.unnecessary-file{
+display:flex;
+align-items:center;
+gap:8px;
+padding:8px;
+margin:4px 0;
+border:1px solid #333;
+border-radius:8px;
+background:#151515;
+font-size:12px;
+}
+
+.unnecessary-file-name{
+flex:1;
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+}
+
+.unnecessary-file-delete{
+padding:6px 9px;
+border:1px solid #444;
+border-radius:7px;
+background:#1a1a1a;
+color:#fff;
+font-size:12px;
+cursor:pointer;
+}
+
+.unnecessary-file-delete:hover{
+background:#252525;
+}
+
 .editor-path{
 display:block;
 margin-top:4px;
@@ -480,6 +530,16 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 
 </div>
 
+<div class="unnecessary-files" id="unnecessaryFiles">
+
+<div class="unnecessary-files-title">
+不要ファイル
+</div>
+
+<div id="unnecessaryFilesList"></div>
+
+</div>
+
 </div>
 
 <div class="editor-panel">
@@ -551,6 +611,8 @@ const treeTools=document.getElementById("treeTools");
 const newFileButton=document.getElementById("newFileButton");
 const newJsonButton=document.getElementById("newJsonButton");
 const uploadButton=document.getElementById("uploadButton");
+const unnecessaryFiles=document.getElementById("unnecessaryFiles");
+const unnecessaryFilesList=document.getElementById("unnecessaryFilesList");
 
 let zip=null;
 let selectedPath="";
@@ -613,27 +675,6 @@ return [
 ".gif",
 ".svg"
 ].some(x=>p.endsWith(x));
-}
-
-function shouldKeepFile(path){
-const p=normalizePath(path);
-const lower=p.toLowerCase();
-const name=baseName(p).toLowerCase();
-
-if(
-lower.startsWith("__macosx/")||
-name==="__macosx"||
-name===".ds_store"||
-name==="thumbs.db"||
-lower.endsWith(".bak")||
-lower.endsWith(".tmp")||
-lower.endsWith(".log")||
-lower.endsWith(".db")
-){
-return false;
-}
-
-return isAllowedFile(p);
 }
 
 function isImage(path){
@@ -855,6 +896,72 @@ node.files.push(parts[parts.length-1]);
 return root;
 }
 
+function renderUnnecessaryFiles(){
+if(!zip){
+unnecessaryFiles.classList.remove("visible");
+unnecessaryFilesList.innerHTML="";
+return;
+}
+
+const files=[];
+
+zip.forEach((path,entry)=>{
+if(!entry.dir){
+files.push(normalizePath(path));
+}
+});
+
+const unnecessary=files.filter(path=>{
+const name=baseName(path).toLowerCase();
+
+return [
+".ds_store",
+"thumbs.db",
+"desktop.ini",
+"__macosx"
+].some(x=>
+name===x||
+path.toLowerCase().startsWith("__macosx/")
+);
+});
+
+unnecessaryFilesList.innerHTML="";
+
+if(!unnecessary.length){
+unnecessaryFiles.classList.remove("visible");
+return;
+}
+
+unnecessaryFiles.classList.add("visible");
+
+for(const path of unnecessary){
+const row=document.createElement("div");
+row.className="unnecessary-file";
+
+const name=document.createElement("div");
+name.className="unnecessary-file-name";
+name.textContent=path;
+
+const button=document.createElement("button");
+button.className="unnecessary-file-delete";
+button.textContent="削除";
+
+button.onclick=()=>{
+if(!zip)return;
+
+zip.remove(path);
+
+renderTree();
+renderUnnecessaryFiles();
+};
+
+row.appendChild(name);
+row.appendChild(button);
+
+unnecessaryFilesList.appendChild(row);
+}
+}
+
 function renderTree(){
 if(!zip){
 fileTree.innerHTML=`
@@ -863,6 +970,7 @@ fileTree.innerHTML=`
 </div>
 `;
 
+renderUnnecessaryFiles();
 return;
 }
 
@@ -1012,6 +1120,7 @@ renderNode(root,"",0);
 fileTree.appendChild(fragment);
 
 updateTreeTools();
+renderUnnecessaryFiles();
 }
 
 function escapeHtml(value){
@@ -1319,52 +1428,71 @@ names.some(x=>x.endsWith("/manifest.json"));
 return addonDetected;
 }
 
-async function createCleanZip(){
-if(!zip)return null;
+async function readPack(){
+const file=fileInput.files[0];
 
-const cleanZip=new JSZip();
+if(!file)return;
 
-const entries=[];
+fileName.textContent=file.name;
 
-zip.forEach((path,entry)=>{
-if(!entry.dir){
-entries.push({
-path:normalizePath(path),
-entry
-});
+outputName=file.name;
+
+try{
+
+const data=await file.arrayBuffer();
+
+zip=await JSZip.loadAsync(data);
+
+selectedPath="";
+selectedType="";
+moveModePath="";
+
+editorTitle.textContent="編集";
+editorPath.textContent="";
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+ファイル構成から項目をタップしてください
+</div>
+`;
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+await refreshAddonDetection();
+
+renderTree();
+updateTreeTools();
+renderUnnecessaryFiles();
+
+}catch(error){
+
+zip=null;
+
+fileTree.innerHTML=`
+<div class="editor-empty">
+ファイルを読み込めませんでした
+</div>
+`;
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+読み込みに失敗しました
+</div>
+`;
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+mcpackButton.disabled=true;
+zipButton.disabled=true;
+
+updateTreeTools();
+renderUnnecessaryFiles();
+
+alert("ファイルの読み込みに失敗しました。");
 }
-});
-
-for(const item of entries){
-if(!shouldKeepFile(item.path))continue;
-
-let data;
-
-if(
-item.path===selectedPath&&
-isText(item.path)
-){
-const textarea=document.getElementById("editorTextarea");
-
-if(textarea){
-data=textarea.value;
-}else{
-data=await item.entry.async("uint8array");
-}
-}else{
-data=await item.entry.async("uint8array");
-}
-
-cleanZip.file(item.path,data);
-}
-
-return await cleanZip.generateAsync({
-type:"blob",
-compression:"DEFLATE",
-compressionOptions:{
-level:6
-}
-});
 }
 
 async function downloadBlob(blob,name){
@@ -1427,7 +1555,7 @@ outputName.replace(/\.(mcaddon|mcpack|zip)$/i,"")+".zip"
 async function downloadMcPack(){
 if(!zip)return;
 
-const blob=await createCleanZip();
+const blob=await makeZip();
 
 let name=outputName
 .replace(/\.(mcaddon|mcpack|zip)$/i,"");
