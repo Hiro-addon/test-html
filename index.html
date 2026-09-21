@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 <title>MC Pack Editor Test</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
@@ -15,394 +14,415 @@ box-sizing:border-box;
 
 html,body{
 margin:0;
-width:100%;
-height:100%;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-background:#f4f4f6;
-color:#111;
+padding:0;
 }
 
 body{
-display:flex;
-flex-direction:column;
-overflow:hidden;
-}
-
-header{
-height:64px;
-background:#fff;
-border-bottom:1px solid #ddd;
-display:flex;
-align-items:center;
-padding:0 14px;
-gap:10px;
-flex-shrink:0;
-}
-
-header h1{
-font-size:19px;
-margin:0;
-font-weight:700;
-}
-
-button,
-input{
-font:inherit;
-}
-
-.top-buttons{
-display:flex;
-gap:8px;
-margin-left:auto;
+background:#111;
+color:#fff;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
 button{
-border:0;
-border-radius:10px;
-padding:10px 13px;
+font-family:inherit;
+}
+
+.container{
+max-width:1000px;
+margin:auto;
+padding:24px 16px 50px;
+}
+
+h1{
+margin:0 0 8px;
+font-size:28px;
+}
+
+.subtitle{
+color:#888;
+margin-bottom:24px;
+}
+
+.section{
+background:#1a1a1a;
+border:1px solid #292929;
+border-radius:14px;
+padding:18px;
+margin-bottom:16px;
+}
+
+.section h2{
+margin:0 0 16px;
+font-size:18px;
+}
+
+.upload{
+border:1px dashed #444;
+border-radius:12px;
+padding:22px;
+text-align:center;
 background:#111;
-color:#fff;
-font-weight:600;
-cursor:pointer;
 }
 
-button:disabled{
-opacity:.35;
-cursor:default;
-}
-
-#fileInput{
+.file-input{
 display:none;
 }
 
-.main{
-flex:1;
-display:flex;
-min-height:0;
-}
-
-.sidebar{
-width:360px;
+.upload-button{
+display:inline-block;
+padding:13px 20px;
+border-radius:10px;
 background:#fff;
-border-right:1px solid #ddd;
-display:flex;
-flex-direction:column;
-min-width:260px;
-}
-
-.sidebar-title{
-padding:14px;
-font-size:14px;
-font-weight:700;
-border-bottom:1px solid #eee;
-}
-
-.tree{
-flex:1;
-overflow:auto;
-padding:8px 0 20px;
-}
-
-.tree-row{
-width:100%;
-min-height:42px;
-display:flex;
-align-items:center;
-padding:0 12px;
-gap:7px;
-border:0;
-border-radius:0;
-background:transparent;
 color:#111;
+font-weight:bold;
+cursor:pointer;
+}
+
+.file-name{
+margin-top:12px;
+color:#888;
+font-size:13px;
+word-break:break-all;
+}
+
+.editor-layout{
+display:grid;
+grid-template-columns:320px 1fr;
+gap:16px;
+}
+
+.file-tree,
+.editor-panel{
+background:#0d0d0d;
+border:1px solid #292929;
+border-radius:12px;
+overflow:hidden;
+}
+
+.file-tree-title,
+.editor-panel-title{
+padding:13px 14px;
+border-bottom:1px solid #292929;
+font-weight:bold;
+}
+
+.tree-content{
+padding:8px;
+}
+
+.tree-item{
+display:block;
+width:100%;
+padding:10px;
+margin:2px 0;
+border:0;
+border-radius:8px;
+background:transparent;
+color:#fff;
 text-align:left;
+font-size:14px;
+cursor:pointer;
+}
+
+.tree-item:hover{
+background:#1c1c1c;
+}
+
+.folder{
+font-weight:700;
+}
+
+.file{
 font-weight:400;
 }
 
-.tree-row:hover{
-background:#f3f3f3;
-}
-
-.tree-row.folder{
-font-weight:600;
-}
-
 .tree-arrow{
+display:inline-block;
 width:18px;
-flex:none;
-text-align:center;
 font-size:12px;
+color:#aaa;
 }
 
-.tree-icon{
-width:22px;
-flex:none;
-text-align:center;
+.tree-indent-1{
+padding-left:30px;
 }
 
-.tree-name{
-min-width:0;
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
+.tree-indent-2{
+padding-left:54px;
 }
 
-.editor{
-flex:1;
-min-width:0;
-display:flex;
-flex-direction:column;
-background:#f4f4f6;
+.tree-indent-3{
+padding-left:78px;
 }
 
-.editor-header{
-height:54px;
-background:#fff;
-border-bottom:1px solid #ddd;
-display:flex;
-align-items:center;
-padding:0 14px;
-font-size:14px;
-font-weight:600;
-overflow:hidden;
+.tree-indent-4{
+padding-left:102px;
 }
 
-.editor-header span{
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
+.tree-indent-5{
+padding-left:126px;
 }
 
-.editor-body{
-flex:1;
-min-height:0;
-position:relative;
+.tree-hidden{
+display:none;
 }
 
-.empty{
-height:100%;
+.editor-path{
+display:block;
+margin-top:4px;
+color:#777;
+font-size:11px;
+font-weight:normal;
+word-break:break-all;
+}
+
+.editor-content{
+min-height:420px;
+}
+
+.editor-empty{
+min-height:420px;
 display:flex;
 align-items:center;
 justify-content:center;
-color:#888;
-font-size:14px;
 text-align:center;
-padding:20px;
+padding:30px;
+color:#777;
 }
 
 textarea{
-position:absolute;
-inset:0;
+display:block;
 width:100%;
-height:100%;
-resize:none;
+height:520px;
+resize:vertical;
 border:0;
-outline:0;
-padding:16px;
-font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-font-size:14px;
-line-height:1.55;
-background:#fff;
-color:#111;
+outline:none;
+padding:15px;
+background:#080808;
+color:#ddd;
+font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+font-size:13px;
+line-height:1.6;
 }
 
-.image-editor{
-position:absolute;
-inset:0;
+.image-area{
+height:520px;
+background:#080808;
 display:flex;
 flex-direction:column;
-background:#151515;
+overflow:hidden;
 }
 
 .image-toolbar{
 height:54px;
-background:#fff;
+flex-shrink:0;
 display:flex;
 align-items:center;
 justify-content:center;
 gap:8px;
-flex-shrink:0;
+padding:8px;
+border-bottom:1px solid #292929;
+background:#101010;
+z-index:5;
 }
 
 .image-toolbar button{
-min-width:42px;
-padding:8px 12px;
+min-width:44px;
+height:38px;
+padding:0 12px;
+border:1px solid #444;
+border-radius:8px;
+background:#1a1a1a;
+color:#fff;
+font-size:18px;
+cursor:pointer;
+}
+
+.image-toolbar button:hover{
+background:#252525;
 }
 
 .zoom-value{
-min-width:60px;
+min-width:65px;
 text-align:center;
-font-size:13px;
-font-weight:600;
-color:#111;
+color:#aaa;
+font-size:12px;
 }
 
-.image-area{
+.image-canvas{
 position:relative;
 flex:1;
 overflow:hidden;
 touch-action:none;
-display:flex;
-align-items:center;
-justify-content:center;
+user-select:none;
+-webkit-user-select:none;
+background:
+linear-gradient(45deg,#171717 25%,transparent 25%),
+linear-gradient(-45deg,#171717 25%,transparent 25%),
+linear-gradient(45deg,transparent 75%,#171717 75%),
+linear-gradient(-45deg,transparent 75%,#171717 75%);
+background-size:24px 24px;
+background-position:0 0,0 12px,12px -12px,-12px 0;
 }
 
-.image-area img{
+.image-transform{
 position:absolute;
+left:50%;
+top:50%;
+width:0;
+height:0;
+}
+
+.image-transform img{
+position:absolute;
+left:0;
+top:0;
+display:block;
+width:auto;
+height:auto;
 max-width:none;
 max-height:none;
+transform-origin:center center;
 user-select:none;
 -webkit-user-drag:none;
-transform-origin:center center;
-touch-action:none;
+pointer-events:none;
 }
 
-.bottom{
-height:62px;
-background:#fff;
-border-top:1px solid #ddd;
+.actions{
 display:flex;
-align-items:center;
 gap:8px;
-padding:8px 12px;
-flex-shrink:0;
+padding:10px;
+border-top:1px solid #292929;
+flex-wrap:wrap;
 }
 
-.bottom button{
-flex:1;
-font-size:13px;
-padding:10px 7px;
+button.action{
+padding:9px 14px;
+border:1px solid #444;
+border-radius:8px;
+background:#1a1a1a;
+color:#fff;
+cursor:pointer;
 }
 
-.status{
-font-size:12px;
-color:#777;
-padding:8px 12px;
-border-top:1px solid #eee;
+button.action:disabled{
+opacity:.4;
+cursor:not-allowed;
+}
+
+button.action.primary{
 background:#fff;
+color:#111;
+border-color:#fff;
 }
 
 @media(max-width:700px){
-header{
-height:58px;
+
+.editor-layout{
+grid-template-columns:1fr;
 }
 
-header h1{
-font-size:16px;
+.actions{
+display:grid;
+grid-template-columns:1fr;
 }
 
-.top-buttons button{
-padding:8px 9px;
-font-size:12px;
+button.action{
+width:100%;
 }
 
-.sidebar{
-width:45%;
-min-width:170px;
-}
-
-.tree-row{
-padding-left:8px;
-padding-right:6px;
-gap:4px;
-}
-
-.tree-name{
-font-size:13px;
-}
-
-.editor-header{
-font-size:12px;
-}
-
-.bottom{
-height:auto;
-min-height:62px;
-}
-
-.bottom button{
-font-size:11px;
-}
 }
 </style>
 </head>
 
 <body>
 
-<header>
-<h1>MC Pack Editor Test</h1>
+<div class="container">
 
-<div class="top-buttons">
-<button id="openButton">開く</button>
+<h1>MC Pack Editor</h1>
+
+<div class="subtitle">
+Minecraft Addon Editor
 </div>
-</header>
+
+<div class="section">
+
+<h2>ファイルを選択</h2>
+
+<div class="upload">
+
+<label class="upload-button" for="fileInput">
+MCAddon / MCPack / ZIPを選択
+</label>
 
 <input
-type="file"
 id="fileInput"
-accept=".mcaddon,.mcpack,.zip"
+class="file-input"
+type="file"
+accept=".mcaddon,.mcpack,.zip,application/zip"
 >
 
-<div class="main">
+<div class="file-name" id="fileName">
+未選択
+</div>
 
-<div class="sidebar">
+</div>
 
-<div class="sidebar-title">
+</div>
+
+<div class="editor-layout">
+
+<div class="file-tree">
+
+<div class="file-tree-title">
 ファイル構成
 </div>
 
-<div
-id="tree"
-class="tree"
->
-<div class="empty">
-.mcaddon / .mcpack / .zip<br>
-ファイルを開いてください
-</div>
-</div>
+<div class="tree-content" id="fileTree">
 
-<div
-id="status"
-class="status"
->
-ファイル未選択
-</div>
-
-</div>
-
-<div class="editor">
-
-<div
-id="editorHeader"
-class="editor-header"
->
-<span>ファイルを選択してください</span>
-</div>
-
-<div
-id="editorBody"
-class="editor-body"
->
-<div class="empty">
-左のファイル構成から<br>
+<div class="editor-empty">
 ファイルを選択してください
 </div>
+
 </div>
 
-<div class="bottom">
+</div>
 
-<button id="saveButton" disabled>
+<div class="editor-panel">
+
+<div class="editor-panel-title">
+
+<div id="editorTitle">
+編集
+</div>
+
+<div class="editor-path" id="editorPath"></div>
+
+</div>
+
+<div class="editor-content" id="editorContent">
+
+<div class="editor-empty">
+ファイル構成から項目をタップしてください
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="action" id="saveButton" disabled>
 保存
 </button>
 
-<button id="exportFileButton" disabled>
+<button class="action" id="fileDownloadButton" disabled>
 このファイルを書き出し
 </button>
 
-<button id="mcpackButton" disabled>
+<button class="action primary" id="mcpackButton" disabled>
 MCAddon / MCPackとして書き出し
 </button>
 
-<button id="zipButton" disabled>
+<button class="action" id="zipButton" disabled>
 ZIPとして書き出し
 </button>
 
@@ -412,29 +432,29 @@ ZIPとして書き出し
 
 </div>
 
-<script>
-const fileInput=document.getElementById("fileInput");
-const openButton=document.getElementById("openButton");
-const tree=document.getElementById("tree");
-const status=document.getElementById("status");
-const editorHeader=document.getElementById("editorHeader");
-const editorBody=document.getElementById("editorBody");
+</div>
 
+<script>
+
+const fileInput=document.getElementById("fileInput");
+const fileName=document.getElementById("fileName");
+const fileTree=document.getElementById("fileTree");
+const editorTitle=document.getElementById("editorTitle");
+const editorPath=document.getElementById("editorPath");
+const editorContent=document.getElementById("editorContent");
 const saveButton=document.getElementById("saveButton");
-const exportFileButton=document.getElementById("exportFileButton");
+const fileDownloadButton=document.getElementById("fileDownloadButton");
 const mcpackButton=document.getElementById("mcpackButton");
 const zipButton=document.getElementById("zipButton");
 
 let zip=null;
-let currentFile=null;
-let currentTextArea=null;
-let currentImage=null;
-
+let selectedPath="";
+let selectedType="";
+let outputName="edited.zip";
 let addonDetected=false;
 let packRoots=[];
 
 let openFolders=new Set();
-let rootOpen=new Set();
 
 let imageState={
 scale:1,
@@ -442,37 +462,91 @@ x:0,
 y:0
 };
 
-let pointers=new Map();
-let pinchStartDistance=0;
-let pinchStartScale=1;
+let imageObjectUrl="";
+
+
+
+function escapeHtml(value){
+
+return String(value)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
+}
+
+
 
 function normalizePath(path){
+
 return path
 .replace(/\\/g,"/")
 .replace(/^\/+/,"")
-.replace(/\/+/g,"/");
+.replace(/\/+/g,"/")
+.replace(/^\.\//,"");
+
 }
+
+
 
 function isText(path){
-return /\.(json|js|mcfunction|lang|txt|md|html|css|xml|yml|yaml)$/i.test(path);
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".json")||
+lower.endsWith(".js")||
+lower.endsWith(".mcfunction")||
+lower.endsWith(".lang")||
+lower.endsWith(".txt")||
+lower.endsWith(".md")||
+lower.endsWith(".html")||
+lower.endsWith(".css")||
+lower.endsWith(".xml")||
+lower.endsWith(".yml")||
+lower.endsWith(".yaml")
+);
+
 }
+
+
 
 function isImage(path){
-return /\.(png|jpg|jpeg|webp|gif)$/i.test(path);
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".png")||
+lower.endsWith(".jpg")||
+lower.endsWith(".jpeg")||
+lower.endsWith(".webp")||
+lower.endsWith(".gif")
+);
+
 }
+
+
 
 function isManifest(path){
-return /(^|\/)manifest\.json$/i.test(path);
+
+return normalizePath(path)
+.toLowerCase()
+.split("/")
+.pop()==="manifest.json";
+
 }
 
+
+
 function isAllowedFile(path){
-if(!path)return false;
 
 const lower=path.toLowerCase();
 
 if(
-lower.includes("/__macosx/")||
-lower.startsWith("__macosx/")||
+lower.includes("__macosx/")||
+lower.startsWith("__macosx")||
 lower.endsWith("/.ds_store")||
 lower===".ds_store"||
 lower.endsWith("/thumbs.db")||
@@ -484,830 +558,1439 @@ lower.endsWith(".log")
 return false;
 }
 
-return isText(path)||isImage(path);
+return(
+isText(path)||
+isImage(path)
+);
+
 }
 
-async function detectMinecraftAddon(z){
-const manifests=[];
 
-for(const name of Object.keys(z.files)){
-const path=normalizePath(name);
 
-if(
-z.files[name].dir||
-!isManifest(path)
-){
-continue;
+function getIcon(path){
+
+if(isImage(path)){
+return "🖼️";
 }
 
-try{
-const text=await z.files[name].async("text");
-const data=JSON.parse(text);
-
-if(
-data &&
-typeof data==="object" &&
-data.header &&
-typeof data.header==="object" &&
-Array.isArray(data.modules)
-){
-const modules=data.modules.map(m=>{
-if(m&&typeof m==="object"){
-return String(m.type||"").toLowerCase();
-}
-return "";
-});
-
-const hasResources=modules.includes("resources");
-const hasData=modules.includes("data");
-
-if(
-data.header.name||
-data.header.uuid||
-hasResources||
-hasData
-){
-manifests.push({
-path,
-data,
-hasResources,
-hasData
-});
-}
-}
-}catch(e){}
-}
-
-return manifests;
-}
-
-function getPackRoot(manifestPath){
-const parts=normalizePath(manifestPath).split("/");
-
-parts.pop();
-
-return parts.join("/");
-}
-
-function sortPackRoots(roots){
-return [...new Set(
-roots
-.filter(v=>v!==undefined)
-.map(normalizePath)
-)].sort((a,b)=>{
-const ad=a.split("/").length;
-const bd=b.split("/").length;
-
-if(ad!==bd)return ad-bd;
-
-return a.localeCompare(b);
-});
-}
-
-function getDisplayRoot(path){
-const p=normalizePath(path);
-
-for(const root of packRoots){
-if(
-p===root||
-p.startsWith(root+"/")
-){
-return root;
-}
-}
-
-const parts=p.split("/");
-return parts.length>1?parts[0]:p;
-}
-
-function getRelativeToRoot(path,root){
-const p=normalizePath(path);
-
-if(p===root){
-return "";
-}
-
-if(p.startsWith(root+"/")){
-return p.slice(root.length+1);
-}
-
-return p;
-}
-
-function getIcon(path,isFolder=false){
-if(isFolder)return "📁";
-
-const lower=path.toLowerCase();
-
-if(lower.endsWith(".json"))return "📄";
-if(lower.endsWith(".js"))return "📜";
-if(lower.endsWith(".mcfunction"))return "⚙️";
-if(lower.endsWith(".lang"))return "🌐";
-if(lower.endsWith(".png")||
-lower.endsWith(".jpg")||
-lower.endsWith(".jpeg")||
-lower.endsWith(".webp")||
-lower.endsWith(".gif"))return "🖼️";
-if(lower.endsWith(".html"))return "🌐";
-if(lower.endsWith(".css"))return "🎨";
-
+if(isText(path)){
 return "📄";
 }
 
-function makeTreeStructure(root){
-const structure={
-folders:new Map(),
-files:[]
-};
+return "📦";
 
-for(const name of Object.keys(zip.files)){
-const path=normalizePath(name);
-
-if(
-zip.files[name].dir||
-!isAllowedFile(path)
-){
-continue;
 }
 
-const relative=getRelativeToRoot(path,root);
 
-if(relative==="")continue;
 
-const parts=relative.split("/").filter(Boolean);
-
-if(parts.length===1){
-structure.files.push({
-path,
-name:parts[0]
-});
-continue;
-}
-
-let current=structure;
-
-for(let i=0;i<parts.length-1;i++){
-const part=parts[i];
-
-if(!current.folders.has(part)){
-current.folders.set(part,{
-name:part,
-path:root+"/"+parts.slice(0,i+1).join("/"),
-folders:new Map(),
-files:[]
-});
-}
-
-current=current.folders.get(part);
-}
-
-current.files.push({
-path,
-name:parts[parts.length-1]
-});
-}
-
-return structure;
-}
-
-function createFolderButton(folder,depth){
-const button=document.createElement("button");
-
-button.className="tree-row folder";
-
-button.style.paddingLeft=(12+depth*20)+"px";
-
-const opened=openFolders.has(folder.path);
-
-button.innerHTML=
-'<span class="tree-arrow">'+
-(opened?"▼":"▶")+
-'</span>'+
-'<span class="tree-icon">📁</span>'+
-'<span class="tree-name">'+
-escapeHtml(folder.name)+
-'</span>';
-
-button.addEventListener("click",()=>{
-if(openFolders.has(folder.path)){
-openFolders.delete(folder.path);
-}else{
-openFolders.add(folder.path);
-}
-
-renderTree();
-});
-
-return button;
-}
-
-function createFileButton(file,depth){
-const button=document.createElement("button");
-
-button.className="tree-row";
-
-button.style.paddingLeft=(12+depth*20)+"px";
-
-button.innerHTML=
-'<span class="tree-arrow"></span>'+
-'<span class="tree-icon">'+
-getIcon(file.path)+
-'</span>'+
-'<span class="tree-name">'+
-escapeHtml(file.name)+
-'</span>';
-
-button.addEventListener("click",()=>{
-openFile(file.path);
-});
-
-return button;
-}
-
-function renderFolder(folder,depth){
-const fragment=document.createDocumentFragment();
-
-fragment.appendChild(
-createFolderButton(folder,depth)
-);
-
-if(!openFolders.has(folder.path)){
-return fragment;
-}
-
-const folders=[...folder.folders.values()]
-.sort((a,b)=>a.name.localeCompare(b.name));
-
-for(const child of folders){
-fragment.appendChild(
-renderFolder(child,depth+1)
-);
-}
-
-const files=[...folder.files]
-.sort((a,b)=>a.name.localeCompare(b.name));
-
-for(const file of files){
-fragment.appendChild(
-createFileButton(file,depth+1)
-);
-}
-
-return fragment;
-}
-
-function renderTree(){
-tree.innerHTML="";
+async function detectMinecraftAddon(){
 
 if(!zip){
-tree.innerHTML=
-'<div class="empty">'+
-'.mcaddon / .mcpack / .zip<br>'+
-'ファイルを開いてください'+
-'</div>';
-return;
-}
 
-const roots=new Set();
-
-for(const name of Object.keys(zip.files)){
-const path=normalizePath(name);
-
-if(
-zip.files[name].dir||
-!isAllowedFile(path)
-){
-continue;
-}
-
-roots.add(getDisplayRoot(path));
-}
-
-const orderedRoots=[...roots].sort((a,b)=>{
-const ap=packRoots.includes(a);
-const bp=packRoots.includes(b);
-
-if(ap&&!bp)return -1;
-if(!ap&&bp)return 1;
-
-return a.localeCompare(b);
-});
-
-for(const root of orderedRoots){
-
-const rootButton=document.createElement("button");
-
-rootButton.className="tree-row folder";
-
-rootButton.style.paddingLeft="12px";
-
-const opened=rootOpen.has(root);
-
-rootButton.innerHTML=
-'<span class="tree-arrow">'+
-(opened?"▼":"▶")+
-'</span>'+
-'<span class="tree-icon">📁</span>'+
-'<span class="tree-name">'+
-escapeHtml(
-root.split("/").filter(Boolean).pop()||root
-)+
-'</span>';
-
-rootButton.addEventListener("click",()=>{
-if(rootOpen.has(root)){
-rootOpen.delete(root);
-}else{
-rootOpen.add(root);
-}
-
-renderTree();
-});
-
-tree.appendChild(rootButton);
-
-if(!opened)continue;
-
-const structure=makeTreeStructure(root);
-
-const folders=[...structure.folders.values()]
-.sort((a,b)=>a.name.localeCompare(b.name));
-
-for(const folder of folders){
-tree.appendChild(
-renderFolder(folder,1)
-);
-}
-
-const files=[...structure.files]
-.sort((a,b)=>a.name.localeCompare(b.name));
-
-/*
-RP / BP の直下ファイルは
-必ず1段右に表示する。
-rootButton が0段目なので、
-depth=1 を指定する。
-*/
-for(const file of files){
-tree.appendChild(
-createFileButton(file,1)
-);
-}
-}
-
-}
-
-function escapeHtml(value){
-return String(value)
-.replace(/&/g,"&amp;")
-.replace(/</g,"&lt;")
-.replace(/>/g,"&gt;")
-.replace(/"/g,"&quot;")
-.replace(/'/g,"&#039;");
-}
-
-async function openFile(path){
-if(!zip||!zip.files[path])return;
-
-currentFile=path;
-currentTextArea=null;
-currentImage=null;
-
-editorHeader.innerHTML=
-"<span>"+escapeHtml(path)+"</span>";
-
-editorBody.innerHTML="";
-
-if(isText(path)){
-const text=await zip.files[path].async("text");
-
-const textarea=document.createElement("textarea");
-
-textarea.value=text;
-
-editorBody.appendChild(textarea);
-
-currentTextArea=textarea;
-
-saveButton.disabled=false;
-exportFileButton.disabled=false;
-
-return;
-}
-
-if(isImage(path)){
-const blob=await zip.files[path].async("blob");
-const url=URL.createObjectURL(blob);
-
-imageState={
-scale:1,
-x:0,
-y:0
+return{
+detected:false,
+packs:[]
 };
 
-const wrapper=document.createElement("div");
-wrapper.className="image-editor";
-
-const toolbar=document.createElement("div");
-toolbar.className="image-toolbar";
-
-const minus=document.createElement("button");
-minus.textContent="−";
-
-const zoom=document.createElement("div");
-zoom.className="zoom-value";
-
-const plus=document.createElement("button");
-plus.textContent="+";
-
-const reset=document.createElement("button");
-reset.textContent="リセット";
-
-toolbar.appendChild(minus);
-toolbar.appendChild(zoom);
-toolbar.appendChild(plus);
-toolbar.appendChild(reset);
-
-const area=document.createElement("div");
-area.className="image-area";
-
-const img=document.createElement("img");
-img.src=url;
-
-area.appendChild(img);
-
-wrapper.appendChild(toolbar);
-wrapper.appendChild(area);
-
-editorBody.appendChild(wrapper);
-
-currentImage=img;
-
-function updateZoom(){
-zoom.textContent=
-Math.round(imageState.scale*100)+"%";
 }
 
-function applyImageTransform(){
-if(!currentImage)return;
+const manifests=[];
 
-currentImage.style.transform=
-"translate("+imageState.x+"px,"+
-imageState.y+"px) "+
-"scale("+imageState.scale+")";
+zip.forEach((path,entry)=>{
 
-updateZoom();
-}
-
-minus.addEventListener("click",()=>{
-imageState.scale=Math.max(
-0.1,
-imageState.scale/1.2
-);
-
-applyImageTransform();
-});
-
-plus.addEventListener("click",()=>{
-imageState.scale=Math.min(
-20,
-imageState.scale*1.2
-);
-
-applyImageTransform();
-});
-
-reset.addEventListener("click",()=>{
-imageState={
-scale:1,
-x:0,
-y:0
-};
-
-applyImageTransform();
-});
-
-setupImageGestures(area);
-
-applyImageTransform();
-
-saveButton.disabled=true;
-exportFileButton.disabled=false;
-
+if(entry.dir){
 return;
 }
 
-saveButton.disabled=true;
-exportFileButton.disabled=true;
-
-editorBody.innerHTML=
-'<div class="empty">このファイルはプレビューできません</div>';
-}
-
-function setupImageGestures(area){
-pointers.clear();
-
-let lastX=0;
-let lastY=0;
-
-area.addEventListener("pointerdown",e=>{
-area.setPointerCapture(e.pointerId);
-
-pointers.set(e.pointerId,{
-x:e.clientX,
-y:e.clientY
-});
-
-if(pointers.size===1){
-lastX=e.clientX;
-lastY=e.clientY;
-}
-
-if(pointers.size===2){
-const pts=[...pointers.values()];
-
-pinchStartDistance=Math.hypot(
-pts[0].x-pts[1].x,
-pts[0].y-pts[1].y
-);
-
-pinchStartScale=imageState.scale;
-}
-});
-
-area.addEventListener("pointermove",e=>{
-if(!pointers.has(e.pointerId))return;
-
-pointers.set(e.pointerId,{
-x:e.clientX,
-y:e.clientY
-});
-
-if(pointers.size===1){
-const dx=e.clientX-lastX;
-const dy=e.clientY-lastY;
-
-imageState.x+=dx;
-imageState.y+=dy;
-
-lastX=e.clientX;
-lastY=e.clientY;
-
-applyImageTransform();
+if(!isManifest(path)){
 return;
 }
 
-if(pointers.size===2){
-const pts=[...pointers.values()];
-
-const distance=Math.hypot(
-pts[0].x-pts[1].x,
-pts[0].y-pts[1].y
-);
-
-if(pinchStartDistance>0){
-const ratio=
-distance/pinchStartDistance;
-
-imageState.scale=Math.min(
-20,
-Math.max(
-0.1,
-pinchStartScale*ratio
-)
-);
-
-applyImageTransform();
-}
-}
+manifests.push({
+path:normalizePath(path),
+entry:entry
 });
 
-function removePointer(e){
-pointers.delete(e.pointerId);
-
-if(pointers.size===1){
-const p=[...pointers.values()][0];
-
-lastX=p.x;
-lastY=p.y;
-}
-}
-
-area.addEventListener("pointerup",removePointer);
-area.addEventListener("pointercancel",removePointer);
-area.addEventListener("pointerleave",removePointer);
-}
-
-saveButton.addEventListener("click",async()=>{
-if(
-!zip||
-!currentFile||
-!currentTextArea
-){
-return;
-}
-
-zip.file(
-currentFile,
-currentTextArea.value
-);
-
-status.textContent="保存しました";
-
-renderTree();
 });
 
-exportFileButton.addEventListener("click",async()=>{
-if(!zip||!currentFile)return;
+const validPacks=[];
 
-let blob;
-
-if(currentTextArea){
-blob=new Blob(
-[currentTextArea.value],
-{
-type:"text/plain;charset=utf-8"
-}
-);
-}else{
-blob=await zip.files[currentFile].async("blob");
-}
-
-downloadBlob(
-blob,
-currentFile.split("/").pop()
-);
-});
-
-function createCleanZip(){
-const output=new JSZip();
-
-for(const name of Object.keys(zip.files)){
-const path=normalizePath(name);
-
-if(
-zip.files[name].dir||
-!isAllowedFile(path)
-){
-continue;
-}
-
-if(
-currentFile===path&&
-currentTextArea
-){
-output.file(
-path,
-currentTextArea.value
-);
-}else{
-output.file(
-path,
-zip.files[name].async("uint8array")
-);
-}
-}
-
-return output;
-}
-
-mcpackButton.addEventListener("click",async()=>{
-if(!zip||!addonDetected)return;
-
-const output=createCleanZip();
-
-const blob=await output.generateAsync({
-type:"blob"
-});
-
-const extension=
-packRoots.length>1?
-"mcaddon":
-"mcpack";
-
-downloadBlob(
-blob,
-"edited_addon."+extension
-);
-});
-
-zipButton.addEventListener("click",async()=>{
-if(!zip)return;
-
-const output=createCleanZip();
-
-const blob=await output.generateAsync({
-type:"blob"
-});
-
-downloadBlob(
-blob,
-"edited_files.zip"
-);
-});
-
-function downloadBlob(blob,name){
-const url=URL.createObjectURL(blob);
-
-const a=document.createElement("a");
-
-a.href=url;
-a.download=name;
-
-document.body.appendChild(a);
-a.click();
-a.remove();
-
-setTimeout(()=>{
-URL.revokeObjectURL(url);
-},1000);
-}
-
-openButton.addEventListener("click",()=>{
-fileInput.click();
-});
-
-fileInput.addEventListener("change",async()=>{
-const file=fileInput.files[0];
-
-if(!file)return;
+for(const item of manifests){
 
 try{
 
-status.textContent="読み込み中...";
+const text=
+await item.entry.async("string");
 
-const buffer=await file.arrayBuffer();
+const json=
+JSON.parse(text);
 
-zip=await JSZip.loadAsync(buffer);
-
-const manifests=
-await detectMinecraftAddon(zip);
-
-packRoots=sortPackRoots(
-manifests.map(m=>getPackRoot(m.path))
-);
-
-addonDetected=
-manifests.length>0;
-
-openFolders.clear();
-rootOpen.clear();
-
-for(const root of packRoots){
-rootOpen.add(root);
+if(
+!json||
+typeof json!=="object"||
+!json.header||
+typeof json.header!=="object"||
+!Array.isArray(json.modules)
+){
+continue;
 }
 
-currentFile=null;
-currentTextArea=null;
-currentImage=null;
+if(
+typeof json.header.name==="undefined"&&
+typeof json.header.uuid==="undefined"
+){
+continue;
+}
 
-editorHeader.innerHTML=
-"<span>ファイルを選択してください</span>";
+const parts=item.path.split("/");
 
-editorBody.innerHTML=
-'<div class="empty">'+
-'左のファイル構成から<br>'+
-'ファイルを選択してください'+
-'</div>';
+parts.pop();
 
-saveButton.disabled=true;
-exportFileButton.disabled=true;
+const root=parts.join("/");
+
+if(!root){
+continue;
+}
+
+let packType="Pack";
+
+const modules=json.modules||[];
+
+if(
+modules.some(module=>
+module&&module.type==="resources"
+)
+){
+
+packType="RP";
+
+}
+
+if(
+modules.some(module=>
+module&&module.type==="data"
+)
+){
+
+packType="BP";
+
+}
+
+validPacks.push({
+root:root,
+type:packType,
+manifest:item.path
+});
+
+}catch(error){
+
+}
+
+}
+
+return{
+detected:validPacks.length>0,
+packs:validPacks
+};
+
+}
+
+
+
+function getPackRoot(path){
+
+const normalized=normalizePath(path);
+
+let result="";
+
+for(const pack of packRoots){
+
+if(
+normalized===pack.root||
+normalized.startsWith(pack.root+"/")
+){
+
+if(
+pack.root.length>result.length
+){
+
+result=pack.root;
+
+}
+
+}
+
+}
+
+return result;
+
+}
+
+
+
+function sortPackRoots(){
+
+const priority={
+"RP":0,
+"BP":1,
+"Pack":2
+};
+
+packRoots.sort((a,b)=>{
+
+const ap=priority[a.type]??3;
+const bp=priority[b.type]??3;
+
+if(ap!==bp){
+return ap-bp;
+}
+
+return a.root.localeCompare(b.root);
+
+});
+
+}
+
+
+
+fileInput.onchange=async()=>{
+
+const file=fileInput.files[0];
+
+if(!file){
+return;
+}
+
+fileName.textContent=file.name;
+outputName=file.name;
+
+try{
+
+zip=await JSZip.loadAsync(file);
+
+const result=
+await detectMinecraftAddon();
+
+addonDetected=result.detected;
+packRoots=result.packs;
+
+sortPackRoots();
+
+renderTree();
 
 mcpackButton.disabled=!addonDetected;
 zipButton.disabled=false;
 
-renderTree();
+editorTitle.textContent="編集";
+editorPath.textContent="";
 
-status.textContent=
-file.name+" を読み込みました";
+editorContent.innerHTML=
+'<div class="editor-empty">ファイル構成から項目をタップしてください</div>';
 
-}catch(e){
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+
+}catch(error){
 
 zip=null;
 addonDetected=false;
 packRoots=[];
 
-tree.innerHTML=
-'<div class="empty">読み込みに失敗しました</div>';
-
-editorHeader.innerHTML=
-"<span>読み込み失敗</span>";
-
-editorBody.innerHTML=
-'<div class="empty">'+
-escapeHtml(e.message||"不明なエラー")+
+fileTree.innerHTML=
+'<div class="editor-empty">読み込みに失敗しました<br><br>'+
+escapeHtml(error.message)+
 '</div>';
 
+mcpackButton.disabled=true;
+zipButton.disabled=true;
 saveButton.disabled=true;
-exportFileButton.disabled=true;
+fileDownloadButton.disabled=true;
+
+}
+
+};
+
+
+
+function renderTree(){
+
+fileTree.innerHTML="";
+
+if(!zip){
+return;
+}
+
+const paths=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir){
+return;
+}
+
+const normalized=normalizePath(path);
+
+if(!isAllowedFile(normalized)){
+return;
+}
+
+paths.push(normalized);
+
+});
+
+
+
+const rootGroups=new Map();
+
+paths.forEach(path=>{
+
+const root=getPackRoot(path);
+
+const displayRoot=
+root||path.split("/")[0];
+
+if(!rootGroups.has(displayRoot)){
+rootGroups.set(displayRoot,[]);
+}
+
+rootGroups.get(displayRoot).push(path);
+
+});
+
+
+
+const groups=[];
+
+packRoots.forEach(pack=>{
+
+if(rootGroups.has(pack.root)){
+
+groups.push({
+root:pack.root,
+type:pack.type,
+paths:rootGroups.get(pack.root)
+});
+
+rootGroups.delete(pack.root);
+
+}
+
+});
+
+
+
+Array.from(rootGroups.keys())
+.sort()
+.forEach(root=>{
+
+groups.push({
+root:root,
+type:"",
+paths:rootGroups.get(root)
+});
+
+});
+
+
+
+function createNodeMap(group){
+
+const nodes=new Map();
+
+group.paths.forEach(path=>{
+
+if(path===group.root){
+return;
+}
+
+if(!path.startsWith(group.root+"/")){
+return;
+}
+
+const local=
+path.slice(group.root.length+1);
+
+const parts=local.split("/");
+
+let current="";
+
+for(let i=0;i<parts.length-1;i++){
+
+current=current
+?current+"/"+parts[i]
+:parts[i];
+
+if(!nodes.has(current)){
+
+nodes.set(current,{
+path:current,
+folder:true
+});
+
+}
+
+}
+
+nodes.set(local,{
+path:local,
+folder:false
+});
+
+});
+
+return nodes;
+
+}
+
+
+
+function getChildren(nodes,parent){
+
+const result=[];
+
+nodes.forEach(node=>{
+
+const parts=node.path.split("/");
+
+const parentPath=
+parts.slice(0,-1).join("/");
+
+if(parentPath===parent){
+
+result.push(node);
+
+}
+
+});
+
+result.sort((a,b)=>{
+
+if(a.folder!==b.folder){
+return a.folder?-1:1;
+}
+
+return a.path.split("/").pop()
+.localeCompare(
+b.path.split("/").pop()
+);
+
+});
+
+return result;
+
+}
+
+
+
+function renderGroup(group){
+
+const rootButton=document.createElement("button");
+
+rootButton.className="tree-item folder";
+
+const rootOpen=
+openFolders.has(group.root);
+
+rootButton.innerHTML=
+'<span class="tree-arrow">'+
+(rootOpen?"▼":"▶")+
+'</span>'+
+'📁 '+
+escapeHtml(
+group.root.split("/").pop()
+)+
+(
+group.type
+?" ["+escapeHtml(group.type)+"]"
+:""
+);
+
+fileTree.appendChild(rootButton);
+
+const nodes=
+createNodeMap(group);
+
+const rootContainer=
+document.createElement("div");
+
+rootContainer.dataset.treeContainer=group.root;
+
+if(!rootOpen){
+
+rootContainer.classList.add("tree-hidden");
+
+}
+
+fileTree.appendChild(rootContainer);
+
+
+
+rootButton.onclick=()=>{
+
+if(openFolders.has(group.root)){
+
+openFolders.delete(group.root);
+
+}else{
+
+openFolders.add(group.root);
+
+}
+
+renderTree();
+
+};
+
+
+
+function renderNode(node,depth,parentContainer){
+
+const fullPath=
+group.root+"/"+node.path;
+
+const open=
+openFolders.has(fullPath);
+
+const button=document.createElement("button");
+
+button.className="tree-item";
+
+if(node.folder){
+
+button.classList.add("folder");
+
+}else{
+
+button.classList.add("file");
+
+}
+
+
+
+if(depth===1){
+button.classList.add("tree-indent-1");
+}
+else if(depth===2){
+button.classList.add("tree-indent-2");
+}
+else if(depth===3){
+button.classList.add("tree-indent-3");
+}
+else if(depth===4){
+button.classList.add("tree-indent-4");
+}
+else if(depth>=5){
+button.classList.add("tree-indent-5");
+}
+
+
+
+const name=
+node.path.split("/").pop();
+
+
+
+if(node.folder){
+
+button.innerHTML=
+'<span class="tree-arrow">'+
+(open?"▼":"▶")+
+'</span>'+
+'📁 '+
+escapeHtml(name);
+
+}else{
+
+button.innerHTML=
+'<span class="tree-arrow"></span>'+
+getIcon(fullPath)+" "+
+escapeHtml(name);
+
+}
+
+
+
+parentContainer.appendChild(button);
+
+
+
+if(node.folder){
+
+const childContainer=
+document.createElement("div");
+
+if(!open){
+
+childContainer.classList.add("tree-hidden");
+
+}
+
+parentContainer.appendChild(childContainer);
+
+
+
+button.onclick=()=>{
+
+if(openFolders.has(fullPath)){
+
+openFolders.delete(fullPath);
+
+}else{
+
+openFolders.add(fullPath);
+
+}
+
+renderTree();
+
+};
+
+
+
+getChildren(nodes,node.path)
+.forEach(child=>{
+
+renderNode(
+child,
+depth+1,
+childContainer
+);
+
+});
+
+}else{
+
+button.onclick=()=>{
+
+openFile(fullPath);
+
+};
+
+}
+
+}
+
+
+
+getChildren(nodes,"")
+.forEach(node=>{
+
+renderNode(
+node,
+1,
+rootContainer
+);
+
+});
+
+}
+
+
+
+groups.forEach(group=>{
+
+renderGroup(group);
+
+});
+
+
+
+if(!groups.length){
+
+fileTree.innerHTML=
+'<div class="editor-empty">表示できるファイルがありません</div>';
+
+}
+
+}
+
+
+
+function applyImageTransform(){
+
+const transform=
+document.getElementById("imageTransform");
+
+if(!transform){
+return;
+}
+
+transform.style.transform=
+"translate3d("+
+imageState.x+
+"px,"+
+imageState.y+
+"px,0)";
+
+const img=
+document.getElementById("previewImage");
+
+if(img){
+
+img.style.transform=
+"translate(-50%,-50%) scale("+
+imageState.scale+
+")";
+
+}
+
+const zoom=
+document.getElementById("zoomValue");
+
+if(zoom){
+
+zoom.textContent=
+Math.round(imageState.scale*100)+"%";
+
+}
+
+}
+
+
+
+function setupImageGestures(canvas){
+
+let pointers=new Map();
+
+let lastX=0;
+let lastY=0;
+
+let pinchStartDistance=0;
+let pinchStartScale=1;
+
+function distance(a,b){
+
+return Math.hypot(
+a.clientX-b.clientX,
+a.clientY-b.clientY
+);
+
+}
+
+
+
+canvas.addEventListener(
+"pointerdown",
+event=>{
+
+canvas.setPointerCapture(event.pointerId);
+
+pointers.set(
+event.pointerId,
+event
+);
+
+if(pointers.size===1){
+
+lastX=event.clientX;
+lastY=event.clientY;
+
+}
+
+if(pointers.size===2){
+
+const values=
+Array.from(pointers.values());
+
+pinchStartDistance=
+distance(
+values[0],
+values[1]
+);
+
+pinchStartScale=
+imageState.scale;
+
+}
+
+event.preventDefault();
+
+},
+{
+passive:false
+}
+);
+
+
+
+canvas.addEventListener(
+"pointermove",
+event=>{
+
+if(!pointers.has(event.pointerId)){
+return;
+}
+
+pointers.set(
+event.pointerId,
+event
+);
+
+if(pointers.size===1){
+
+const dx=
+event.clientX-lastX;
+
+const dy=
+event.clientY-lastY;
+
+imageState.x+=dx;
+imageState.y+=dy;
+
+lastX=event.clientX;
+lastY=event.clientY;
+
+applyImageTransform();
+
+}
+
+else if(pointers.size===2){
+
+const values=
+Array.from(pointers.values());
+
+const currentDistance=
+distance(
+values[0],
+values[1]
+);
+
+if(pinchStartDistance>0){
+
+const ratio=
+currentDistance/
+pinchStartDistance;
+
+imageState.scale=
+Math.max(
+0.1,
+Math.min(
+10,
+pinchStartScale*ratio
+)
+);
+
+applyImageTransform();
+
+}
+
+}
+
+event.preventDefault();
+
+},
+{
+passive:false
+}
+);
+
+
+
+canvas.addEventListener(
+"pointerup",
+event=>{
+
+pointers.delete(event.pointerId);
+
+if(pointers.size===1){
+
+const remaining=
+Array.from(pointers.values())[0];
+
+lastX=remaining.clientX;
+lastY=remaining.clientY;
+
+}
+
+},
+{
+passive:false
+}
+);
+
+
+
+canvas.addEventListener(
+"pointercancel",
+event=>{
+
+pointers.delete(event.pointerId);
+
+},
+{
+passive:false
+}
+);
+
+}
+
+
+
+async function openFile(path){
+
+if(!zip){
+return;
+}
+
+const entry=zip.file(path);
+
+if(!entry){
+return;
+}
+
+selectedPath=normalizePath(path);
+
+editorTitle.textContent=
+selectedPath.split("/").pop();
+
+editorPath.textContent=selectedPath;
+
+
+
+if(imageObjectUrl){
+
+URL.revokeObjectURL(imageObjectUrl);
+
+imageObjectUrl="";
+
+}
+
+
+
+if(isText(selectedPath)){
+
+const text=
+await entry.async("string");
+
+selectedType="text";
+
+const textarea=
+document.createElement("textarea");
+
+textarea.id="editorTextarea";
+textarea.value=text;
+
+editorContent.innerHTML="";
+editorContent.appendChild(textarea);
+
+saveButton.disabled=false;
+fileDownloadButton.disabled=false;
+
+return;
+
+}
+
+
+
+if(isImage(selectedPath)){
+
+selectedType="image";
+
+imageState={
+scale:1,
+x:0,
+y:0
+};
+
+const blob=
+await entry.async("blob");
+
+imageObjectUrl=
+URL.createObjectURL(blob);
+
+editorContent.innerHTML="";
+
+const area=
+document.createElement("div");
+
+area.className="image-area";
+
+const toolbar=
+document.createElement("div");
+
+toolbar.className="image-toolbar";
+
+const minus=
+document.createElement("button");
+
+minus.textContent="−";
+
+const reset=
+document.createElement("button");
+
+reset.textContent="リセット";
+
+const plus=
+document.createElement("button");
+
+plus.textContent="+";
+
+const zoomValue=
+document.createElement("div");
+
+zoomValue.className="zoom-value";
+zoomValue.id="zoomValue";
+
+zoomValue.textContent="100%";
+
+toolbar.appendChild(minus);
+toolbar.appendChild(zoomValue);
+toolbar.appendChild(plus);
+toolbar.appendChild(reset);
+
+
+
+const canvas=
+document.createElement("div");
+
+canvas.className="image-canvas";
+
+const transform=
+document.createElement("div");
+
+transform.className="image-transform";
+transform.id="imageTransform";
+
+const img=
+document.createElement("img");
+
+img.id="previewImage";
+img.src=imageObjectUrl;
+img.alt=selectedPath;
+
+transform.appendChild(img);
+canvas.appendChild(transform);
+
+area.appendChild(toolbar);
+area.appendChild(canvas);
+
+editorContent.appendChild(area);
+
+
+
+minus.onclick=()=>{
+
+imageState.scale=
+Math.max(
+0.1,
+imageState.scale-0.1
+);
+
+applyImageTransform();
+
+};
+
+
+
+plus.onclick=()=>{
+
+imageState.scale=
+Math.min(
+10,
+imageState.scale+0.1
+);
+
+applyImageTransform();
+
+};
+
+
+
+reset.onclick=()=>{
+
+imageState={
+scale:1,
+x:0,
+y:0
+};
+
+applyImageTransform();
+
+};
+
+
+
+img.onload=()=>{
+
+img.style.width=
+img.naturalWidth+"px";
+
+img.style.height=
+img.naturalHeight+"px";
+
+applyImageTransform();
+
+};
+
+
+
+setupImageGestures(canvas);
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=false;
+
+return;
+
+}
+
+
+
+selectedType="other";
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+
+editorContent.innerHTML=
+'<div class="editor-empty">'+
+"このファイルはプレビュー・編集に対応していません。"+
+'</div>';
+
+}
+
+
+
+saveButton.onclick=()=>{
+
+if(
+!zip||
+!selectedPath||
+selectedType!=="text"
+){
+return;
+}
+
+const textarea=
+document.getElementById("editorTextarea");
+
+if(!textarea){
+return;
+}
+
+zip.file(
+selectedPath,
+textarea.value
+);
+
+saveButton.textContent="保存しました";
+
+setTimeout(()=>{
+
+saveButton.textContent="保存";
+
+},1200);
+
+};
+
+
+
+fileDownloadButton.onclick=async()=>{
+
+if(
+!zip||
+!selectedPath
+){
+return;
+}
+
+const entry=
+zip.file(selectedPath);
+
+if(!entry){
+return;
+}
+
+fileDownloadButton.disabled=true;
+fileDownloadButton.textContent="生成中...";
+
+try{
+
+let blob;
+
+if(selectedType==="text"){
+
+const textarea=
+document.getElementById("editorTextarea");
+
+const value=
+textarea
+?textarea.value
+:await entry.async("string");
+
+zip.file(
+selectedPath,
+value
+);
+
+blob=
+new Blob(
+[value],
+{
+type:"text/plain;charset=utf-8"
+}
+);
+
+}else{
+
+blob=
+await entry.async("blob");
+
+}
+
+downloadBlob(
+blob,
+selectedPath.split("/").pop()
+);
+
+fileDownloadButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+fileDownloadButton.textContent=
+"このファイルを書き出し";
+
+fileDownloadButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+fileDownloadButton.textContent=
+"このファイルを書き出し";
+
+fileDownloadButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+
+
+
+async function createCleanZip(){
+
+const cleanZip=
+new JSZip();
+
+const entries=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir){
+return;
+}
+
+const normalized=
+normalizePath(path);
+
+if(!isAllowedFile(normalized)){
+return;
+}
+
+entries.push({
+path:normalized,
+entry:entry
+});
+
+});
+
+
+
+for(const item of entries){
+
+if(
+item.path===selectedPath&&
+selectedType==="text"
+){
+
+const textarea=
+document.getElementById("editorTextarea");
+
+if(textarea){
+
+cleanZip.file(
+item.path,
+textarea.value
+);
+
+continue;
+
+}
+
+}
+
+const data=
+await item.entry.async("uint8array");
+
+cleanZip.file(
+item.path,
+data
+);
+
+}
+
+return cleanZip;
+
+}
+
+
+
+mcpackButton.onclick=async()=>{
+
+if(!zip||!addonDetected){
+return;
+}
+
 mcpackButton.disabled=true;
 zipButton.disabled=true;
 
-status.textContent="読み込み失敗";
+mcpackButton.textContent="生成中...";
+
+try{
+
+const cleanZip=
+await createCleanZip();
+
+const blob=
+await cleanZip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:9
+}
+});
+
+let name=
+outputName
+.replace(/\.zip$/i,"")
+.replace(/\.mcaddon$/i,"")
+.replace(/\.mcpack$/i,"");
+
+const extension=
+packRoots.length>1
+?".mcaddon"
+:".mcpack";
+
+downloadBlob(
+blob,
+name+extension
+);
+
+mcpackButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+mcpackButton.textContent=
+"MCAddon / MCPackとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+mcpackButton.textContent=
+"MCAddon / MCPackとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+alert(error.message);
+
 }
 
-fileInput.value="";
+};
+
+
+
+zipButton.onclick=async()=>{
+
+if(!zip){
+return;
+}
+
+mcpackButton.disabled=true;
+zipButton.disabled=true;
+
+zipButton.textContent="生成中...";
+
+try{
+
+const cleanZip=
+await createCleanZip();
+
+const blob=
+await cleanZip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:9
+}
 });
+
+let name=
+outputName
+.replace(/\.zip$/i,"")
+.replace(/\.mcaddon$/i,"")
+.replace(/\.mcpack$/i,"");
+
+downloadBlob(
+blob,
+name+".zip"
+);
+
+zipButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+zipButton.textContent="ZIPとして書き出し";
+
+mcpackButton.disabled=!addonDetected;
+zipButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+zipButton.textContent="ZIPとして書き出し";
+
+mcpackButton.disabled=!addonDetected;
+zipButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+
+
+
+function downloadBlob(blob,name){
+
+const url=
+URL.createObjectURL(blob);
+
+const a=
+document.createElement("a");
+
+a.href=url;
+a.download=name;
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>{
+
+URL.revokeObjectURL(url);
+
+},1000);
+
+}
+
 </script>
 
 </body>
