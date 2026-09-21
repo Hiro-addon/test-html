@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MC Pack Editor Test</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
 *{
 box-sizing:border-box;
@@ -18,7 +19,7 @@ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
 .container{
-max-width:900px;
+max-width:1000px;
 margin:auto;
 padding:24px 16px 50px;
 }
@@ -77,7 +78,7 @@ word-break:break-all;
 
 .editor-layout{
 display:grid;
-grid-template-columns:300px 1fr;
+grid-template-columns:320px 1fr;
 gap:16px;
 }
 
@@ -103,8 +104,8 @@ padding:8px;
 .tree-item{
 display:block;
 width:100%;
-padding:10px;
-margin-bottom:2px;
+padding:10px 10px;
+margin:2px 0;
 border:0;
 border-radius:8px;
 background:transparent;
@@ -119,27 +120,49 @@ background:#1c1c1c;
 }
 
 .folder{
-font-weight:bold;
+font-weight:700;
+cursor:default;
 }
 
-.indent{
-padding-left:36px;
+.file{
+font-weight:400;
+}
+
+.tree-indent-1{
+padding-left:34px;
+}
+
+.tree-indent-2{
+padding-left:58px;
+}
+
+.tree-indent-3{
+padding-left:82px;
+}
+
+.tree-indent-4{
+padding-left:106px;
+}
+
+.tree-indent-5{
+padding-left:130px;
 }
 
 .editor-path{
-color:#888;
-font-size:12px;
+display:block;
+margin-top:4px;
+color:#777;
+font-size:11px;
 font-weight:normal;
-margin-left:8px;
 word-break:break-all;
 }
 
 .editor-content{
-min-height:400px;
+min-height:420px;
 }
 
 .editor-empty{
-min-height:400px;
+min-height:420px;
 display:flex;
 align-items:center;
 justify-content:center;
@@ -151,7 +174,7 @@ color:#777;
 textarea{
 display:block;
 width:100%;
-height:500px;
+height:520px;
 resize:vertical;
 border:0;
 outline:none;
@@ -164,7 +187,7 @@ line-height:1.6;
 }
 
 .image-preview{
-min-height:400px;
+min-height:420px;
 padding:20px;
 display:flex;
 align-items:center;
@@ -175,30 +198,16 @@ background:#080808;
 .image-preview img{
 display:block;
 max-width:100%;
-max-height:500px;
+max-height:520px;
 width:auto;
 height:auto;
 object-fit:contain;
 image-rendering:auto;
 }
 
-.image-info{
-position:absolute;
-bottom:10px;
-left:10px;
-right:10px;
-padding:8px 10px;
-border-radius:8px;
-background:rgba(0,0,0,.75);
-color:#aaa;
-font-size:12px;
-text-align:center;
-}
-
 .image-preview-wrap{
-position:relative;
 width:100%;
-min-height:360px;
+min-height:380px;
 display:flex;
 align-items:center;
 justify-content:center;
@@ -226,9 +235,11 @@ cursor:not-allowed;
 }
 
 @media(max-width:700px){
+
 .editor-layout{
 grid-template-columns:1fr;
 }
+
 }
 </style>
 </head>
@@ -290,11 +301,11 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 
 <div class="editor-panel-title">
 
-<span id="editorTitle">
+<div id="editorTitle">
 編集
-</span>
+</div>
 
-<span class="editor-path" id="editorPath"></span>
+<div class="editor-path" id="editorPath"></div>
 
 </div>
 
@@ -325,6 +336,7 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 </div>
 
 <script>
+
 const fileInput=document.getElementById("fileInput");
 const fileName=document.getElementById("fileName");
 const fileTree=document.getElementById("fileTree");
@@ -339,6 +351,103 @@ let selectedPath="";
 let selectedType="";
 let outputName="edited.zip";
 
+
+
+function escapeHtml(value){
+
+return String(value)
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+
+}
+
+
+
+function isText(path){
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".json")||
+lower.endsWith(".js")||
+lower.endsWith(".mcfunction")||
+lower.endsWith(".lang")||
+lower.endsWith(".txt")||
+lower.endsWith(".md")||
+lower.endsWith(".html")||
+lower.endsWith(".css")||
+lower.endsWith(".xml")||
+lower.endsWith(".yml")||
+lower.endsWith(".yaml")
+);
+
+}
+
+
+
+function isImage(path){
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".png")||
+lower.endsWith(".jpg")||
+lower.endsWith(".jpeg")||
+lower.endsWith(".webp")||
+lower.endsWith(".gif")
+);
+
+}
+
+
+
+function isAllowedFile(path){
+
+const lower=path.toLowerCase();
+
+if(
+lower.includes("__macosx/")||
+lower.startsWith("__macosx")||
+lower.endsWith("/.ds_store")||
+lower===".ds_store"||
+lower.endsWith("/thumbs.db")||
+lower==="thumbs.db"||
+lower.endsWith(".db")||
+lower.endsWith(".bak")||
+lower.endsWith(".tmp")||
+lower.endsWith(".log")
+){
+return false;
+}
+
+return(
+isText(path)||
+isImage(path)
+);
+
+}
+
+
+
+function getIcon(path){
+
+if(isImage(path)){
+return "🖼️";
+}
+
+if(isText(path)){
+return "📄";
+}
+
+return "📦";
+
+}
+
+
+
 fileInput.onchange=async()=>{
 
 const file=fileInput.files[0];
@@ -348,6 +457,7 @@ return;
 }
 
 fileName.textContent=file.name;
+
 outputName=file.name;
 
 try{
@@ -359,6 +469,7 @@ renderTree();
 downloadButton.disabled=false;
 
 editorTitle.textContent="編集";
+
 editorPath.textContent="";
 
 editorContent.innerHTML=
@@ -381,99 +492,7 @@ downloadButton.disabled=true;
 
 };
 
-function escapeHtml(value){
 
-return String(value)
-.replace(/&/g,"&amp;")
-.replace(/</g,"&lt;")
-.replace(/>/g,"&gt;")
-.replace(/"/g,"&quot;")
-.replace(/'/g,"&#039;");
-
-}
-
-function isText(path){
-
-const lower=path.toLowerCase();
-
-return(
-lower.endsWith(".json")||
-lower.endsWith(".js")||
-lower.endsWith(".mcfunction")||
-lower.endsWith(".lang")||
-lower.endsWith(".txt")||
-lower.endsWith(".md")||
-lower.endsWith(".html")||
-lower.endsWith(".css")||
-lower.endsWith(".xml")||
-lower.endsWith(".yml")||
-lower.endsWith(".yaml")
-);
-
-}
-
-function isImage(path){
-
-const lower=path.toLowerCase();
-
-return(
-lower.endsWith(".png")||
-lower.endsWith(".jpg")||
-lower.endsWith(".jpeg")||
-lower.endsWith(".webp")||
-lower.endsWith(".gif")
-);
-
-}
-
-function isEditable(path){
-
-return isText(path)||isImage(path);
-
-}
-
-function icon(path){
-
-if(isText(path)){
-return "📄";
-}
-
-if(isImage(path)){
-return "🖼️";
-}
-
-return "📦";
-
-}
-
-function shouldShow(path){
-
-const lower=path.toLowerCase();
-
-if(
-lower.endsWith(".png")||
-lower.endsWith(".jpg")||
-lower.endsWith(".jpeg")||
-lower.endsWith(".webp")||
-lower.endsWith(".gif")||
-lower.endsWith(".json")||
-lower.endsWith(".js")||
-lower.endsWith(".mcfunction")||
-lower.endsWith(".lang")||
-lower.endsWith(".txt")||
-lower.endsWith(".md")||
-lower.endsWith(".html")||
-lower.endsWith(".css")||
-lower.endsWith(".xml")||
-lower.endsWith(".yml")||
-lower.endsWith(".yaml")
-){
-return true;
-}
-
-return false;
-
-}
 
 function renderTree(){
 
@@ -487,7 +506,7 @@ if(entry.dir){
 return;
 }
 
-if(!shouldShow(path)){
+if(!isAllowedFile(path)){
 return;
 }
 
@@ -495,137 +514,251 @@ paths.push(path);
 
 });
 
-paths.sort();
+paths.sort((a,b)=>a.localeCompare(b));
 
-const visibleFolders=new Set();
+if(paths.length===0){
+
+fileTree.innerHTML=
+'<div class="editor-empty">表示できるファイルがありません</div>';
+
+return;
+
+}
+
+
+
+const nodes=new Map();
+
+function addFolder(path){
+
+if(!path){
+return;
+}
+
+if(!nodes.has(path)){
+
+nodes.set(path,{
+path:path,
+folder:true,
+children:new Set()
+});
+
+}
+
+}
+
+
+
+function addFile(path){
+
+nodes.set(path,{
+path:path,
+folder:false,
+children:new Set()
+});
+
+}
+
+
 
 paths.forEach(path=>{
 
 const parts=path.split("/");
 
-for(let i=1;i<parts.length;i++){
+let current="";
 
-visibleFolders.add(
-parts.slice(0,i).join("/")
-);
+for(let i=0;i<parts.length-1;i++){
+
+current=current
+?current+"/"+parts[i]
+:parts[i];
+
+addFolder(current);
+
+}
+
+addFile(path);
+
+});
+
+
+
+nodes.forEach(node=>{
+
+if(node.folder){
+return;
+}
+
+const parts=node.path.split("/");
+
+if(parts.length>1){
+
+const parent=parts
+.slice(0,-1)
+.join("/");
+
+if(nodes.has(parent)){
+nodes.get(parent).children.add(node.path);
+}
+
+}
+
+});
+
+
+
+const root=[];
+
+nodes.forEach(node=>{
+
+if(!node.path.includes("/")){
+
+root.push(node);
 
 }
 
 });
 
-const folders=Array.from(visibleFolders);
 
-const all=[];
 
-folders.forEach(path=>{
+function sortNodes(list){
 
-all.push({
-path:path,
-folder:true
-});
+return list.sort((a,b)=>{
 
-});
-
-paths.forEach(path=>{
-
-all.push({
-path:path,
-folder:false
-});
-
-});
-
-all.sort((a,b)=>{
-
-const aParts=a.path.split("/");
-const bParts=b.path.split("/");
-
-const min=Math.min(aParts.length,bParts.length);
-
-for(let i=0;i<min;i++){
-
-if(aParts[i]!==bParts[i]){
-
-const aIsFolder=
-folders.includes(aParts.slice(0,i+1).join("/"));
-
-const bIsFolder=
-folders.includes(bParts.slice(0,i+1).join("/"));
-
-if(aIsFolder!==bIsFolder){
-return aIsFolder?-1:1;
+if(a.folder!==b.folder){
+return a.folder?-1:1;
 }
 
-return aParts[i].localeCompare(bParts[i]);
+const an=a.path.split("/").pop();
+const bn=b.path.split("/").pop();
+
+return an.localeCompare(bn);
+
+});
 
 }
 
-}
 
-if(aParts.length!==bParts.length){
-return aParts.length-bParts.length;
-}
 
-return a.path.localeCompare(b.path);
-
-});
-
-all.forEach(item=>{
+function renderNode(node,depth){
 
 const button=document.createElement("button");
 
 button.className="tree-item";
 
-const depth=
-item.path.split("/").length-1;
-
-if(depth>0){
-button.classList.add("indent");
-}
-
-const name=
-item.path.split("/").pop();
-
-if(item.folder){
+if(node.folder){
 
 button.classList.add("folder");
 
-button.innerHTML=
-"📁 "+escapeHtml(name);
-
-button.onclick=()=>{
-
-return;
-
-};
-
 }else{
 
+button.classList.add("file");
+
+}
+
+
+
+if(depth===1){
+button.classList.add("tree-indent-1");
+}
+
+if(depth===2){
+button.classList.add("tree-indent-2");
+}
+
+if(depth===3){
+button.classList.add("tree-indent-3");
+}
+
+if(depth===4){
+button.classList.add("tree-indent-4");
+}
+
+if(depth>=5){
+button.classList.add("tree-indent-5");
+}
+
+
+
+const name=node.path.split("/").pop();
+
 button.innerHTML=
-icon(item.path)+" "+escapeHtml(name);
+(node.folder?"📁 ":"")+ 
+(!node.folder?getIcon(node.path)+" ":"")+
+escapeHtml(name);
+
+
+
+if(!node.folder){
 
 button.onclick=()=>{
 
-openFile(item.path);
+openFile(node.path);
 
 };
 
 }
+
+
 
 fileTree.appendChild(button);
 
+
+
+if(node.folder){
+
+const children=[];
+
+nodes.forEach(child=>{
+
+if(!child.path.includes("/")){
+return;
+}
+
+const parent=child.path
+.split("/")
+.slice(0,-1)
+.join("/");
+
+if(parent===node.path){
+
+children.push(child);
+
+}
+
 });
 
-if(!all.length){
+sortNodes(children);
 
-fileTree.innerHTML=
-'<div class="editor-empty">編集可能なファイルがありません</div>';
+children.forEach(child=>{
+
+renderNode(child,depth+1);
+
+});
 
 }
 
 }
+
+
+
+sortNodes(root);
+
+root.forEach(node=>{
+
+renderNode(node,0);
+
+});
+
+}
+
+
 
 async function openFile(path){
+
+if(!zip){
+return;
+}
 
 const entry=zip.file(path);
 
@@ -640,6 +773,8 @@ path.split("/").pop();
 
 editorPath.textContent=path;
 
+
+
 if(isText(path)){
 
 const text=
@@ -651,9 +786,11 @@ const textarea=
 document.createElement("textarea");
 
 textarea.id="editorTextarea";
+
 textarea.value=text;
 
 editorContent.innerHTML="";
+
 editorContent.appendChild(textarea);
 
 saveButton.disabled=false;
@@ -661,6 +798,8 @@ saveButton.disabled=false;
 return;
 
 }
+
+
 
 if(isImage(path)){
 
@@ -674,15 +813,15 @@ URL.createObjectURL(blob);
 
 editorContent.innerHTML="";
 
+const preview=
+document.createElement("div");
+
+preview.className="image-preview";
+
 const wrap=
 document.createElement("div");
 
-wrap.className="image-preview";
-
-const inner=
-document.createElement("div");
-
-inner.className="image-preview-wrap";
+wrap.className="image-preview-wrap";
 
 const img=
 document.createElement("img");
@@ -691,23 +830,19 @@ img.src=url;
 
 img.alt=path;
 
-const info=
-document.createElement("div");
+wrap.appendChild(img);
 
-info.className="image-info";
-info.textContent="画像プレビュー";
+preview.appendChild(wrap);
 
-inner.appendChild(img);
-inner.appendChild(info);
-
-wrap.appendChild(inner);
-editorContent.appendChild(wrap);
+editorContent.appendChild(preview);
 
 saveButton.disabled=true;
 
 return;
 
 }
+
+
 
 selectedType="other";
 
@@ -720,9 +855,15 @@ editorContent.innerHTML=
 
 }
 
+
+
 saveButton.onclick=()=>{
 
-if(!zip||!selectedPath||selectedType!=="text"){
+if(
+!zip||
+!selectedPath||
+selectedType!=="text"
+){
 return;
 }
 
@@ -741,10 +882,14 @@ textarea.value
 saveButton.textContent="保存しました";
 
 setTimeout(()=>{
+
 saveButton.textContent="保存";
+
 },1200);
 
 };
+
+
 
 downloadButton.onclick=async()=>{
 
@@ -753,6 +898,7 @@ return;
 }
 
 downloadButton.disabled=true;
+
 downloadButton.textContent="生成中...";
 
 try{
@@ -773,6 +919,7 @@ const a=
 document.createElement("a");
 
 a.href=url;
+
 a.download=outputName;
 
 document.body.appendChild(a);
@@ -782,7 +929,9 @@ a.click();
 a.remove();
 
 setTimeout(()=>{
+
 URL.revokeObjectURL(url);
+
 },1000);
 
 downloadButton.textContent="書き出し完了";
@@ -790,6 +939,7 @@ downloadButton.textContent="書き出し完了";
 setTimeout(()=>{
 
 downloadButton.textContent="書き出し";
+
 downloadButton.disabled=false;
 
 },1200);
@@ -797,6 +947,7 @@ downloadButton.disabled=false;
 }catch(error){
 
 downloadButton.textContent="書き出し";
+
 downloadButton.disabled=false;
 
 alert(error.message);
@@ -804,6 +955,7 @@ alert(error.message);
 }
 
 };
+
 </script>
 
 </body>
