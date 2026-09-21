@@ -1385,6 +1385,7 @@ button.classList.add("selected-file");
 
 button.innerHTML=`
 <span class="tree-arrow"></span>
+<span>${getFileIcon(file)}</span>
 ${escapeHtml(file)}
 `;
 
@@ -1467,6 +1468,16 @@ fileTree.appendChild(panel);
 }
 
 updateTreeTools();
+
+}
+
+function getFileIcon(path){
+
+if(isImage(path)){
+return "🖼️";
+}
+
+return "📄";
 
 }
 
