@@ -179,6 +179,10 @@ user-select:none;
 background:#252525;
 }
 
+.selected-folder{
+background:#252525;
+}
+
 .file-operations{
 display:flex;
 gap:6px;
@@ -200,6 +204,50 @@ cursor:pointer;
 
 .file-operations button:hover{
 background:#252525;
+}
+
+.move-panel{
+display:none;
+padding:10px 8px;
+border-top:1px solid #292929;
+animation:filePop .18s ease;
+}
+
+.move-panel.visible{
+display:block;
+}
+
+.move-panel-text{
+font-size:12px;
+color:#aaa;
+margin-bottom:8px;
+word-break:break-all;
+}
+
+.move-panel-buttons{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:6px;
+}
+
+.move-panel-buttons button{
+padding:8px 5px;
+border:1px solid #444;
+border-radius:8px;
+background:#1a1a1a;
+color:#fff;
+font-size:12px;
+cursor:pointer;
+}
+
+.move-panel-buttons button:hover{
+background:#252525;
+}
+
+.move-panel-buttons .move-confirm{
+background:#fff;
+color:#111;
+border-color:#fff;
 }
 
 @keyframes filePop{
@@ -566,6 +614,7 @@ y:0
 };
 let imageObjectUrl="";
 let moveModePath="";
+let moveTargetFolder="";
 
 function normalizePath(path){
 return String(path||"")
@@ -839,6 +888,7 @@ return root;
 }
 
 function renderTree(){
+
 if(!zip){
 
 fileTree.innerHTML=`
@@ -859,7 +909,24 @@ const fragment=document.createDocumentFragment();
 function renderNode(node,parentPath,depth){
 
 const folders=[...node.folders.keys()]
-.sort((a,b)=>a.localeCompare(b));
+.sort((a,b)=>{
+
+if(moveModePath){
+
+const aSpecial=
+a.toUpperCase()==="RP"||
+a.toUpperCase()==="BP";
+
+const bSpecial=
+b.toUpperCase()==="RP"||
+b.toUpperCase()==="BP";
+
+if(aSpecial&&!bSpecial)return -1;
+if(!aSpecial&&bSpecial)return 1;
+}
+
+return a.localeCompare(b);
+});
 
 const files=[...node.files]
 .sort((a,b)=>a.localeCompare(b));
@@ -880,14 +947,23 @@ button.className=
 button.dataset.path=fullPath;
 button.dataset.folder="true";
 
+if(moveTargetFolder===fullPath){
+button.classList.add("selected-folder");
+}
+
 button.innerHTML=`
 <span class="tree-arrow">${open?"▼":"▶"}</span>
 ${escapeHtml(folderName)}
 `;
 
 button.onclick=async()=>{
+
 if(moveModePath){
-await moveSelectedFile(fullPath);
+
+moveTargetFolder=fullPath;
+
+renderTree();
+
 return;
 }
 
@@ -937,9 +1013,9 @@ ${escapeHtml(file)}
 `;
 
 button.onclick=async()=>{
+
 if(moveModePath){
-moveModePath="";
-await openFile(fullPath);
+
 return;
 }
 
@@ -948,7 +1024,7 @@ await openFile(fullPath);
 
 fragment.appendChild(button);
 
-if(selectedPath===fullPath){
+if(selectedPath===fullPath&&!moveModePath){
 
 const box=document.createElement("div");
 
@@ -956,19 +1032,14 @@ box.className="file-operations";
 
 const move=document.createElement("button");
 
-move.textContent=
-moveModePath===selectedPath
-?"移動先を選択"
-:"移動";
+move.textContent="移動";
 
 move.onclick=e=>{
+
 e.stopPropagation();
 
-if(moveModePath===selectedPath){
-moveModePath="";
-}else{
 moveModePath=selectedPath;
-}
+moveTargetFolder=directoryName(selectedPath);
 
 renderTree();
 };
@@ -1005,6 +1076,54 @@ renderNode(root,"",0);
 
 fileTree.appendChild(fragment);
 
+if(moveModePath){
+
+const panel=document.createElement("div");
+
+panel.className="move-panel visible";
+
+const text=document.createElement("div");
+
+text.className="move-panel-text";
+
+text.textContent=
+moveTargetFolder
+?`移動先: ${moveTargetFolder}`
+:"移動先: ルート";
+
+const buttons=document.createElement("div");
+
+buttons.className="move-panel-buttons";
+
+const cancel=document.createElement("button");
+
+cancel.textContent="キャンセル";
+
+cancel.onclick=()=>{
+moveModePath="";
+moveTargetFolder="";
+renderTree();
+};
+
+const confirmButton=document.createElement("button");
+
+confirmButton.className="move-confirm";
+
+confirmButton.textContent="移動";
+
+confirmButton.onclick=async()=>{
+await moveSelectedFile(moveTargetFolder);
+};
+
+buttons.appendChild(cancel);
+buttons.appendChild(confirmButton);
+
+panel.appendChild(text);
+panel.appendChild(buttons);
+
+fileTree.appendChild(panel);
+}
+
 updateTreeTools();
 }
 
@@ -1021,6 +1140,8 @@ async function openFile(path){
 
 if(!zip)return;
 
+if(moveModePath)return;
+
 path=normalizePath(path);
 
 const entry=zip.file(path);
@@ -1030,6 +1151,7 @@ if(!entry)return;
 selectedPath=path;
 selectedType=isImage(path)?"image":"text";
 moveModePath="";
+moveTargetFolder="";
 
 editorTitle.textContent=baseName(path);
 editorPath.textContent=path;
@@ -1069,9 +1191,9 @@ showEmpty();
 
 async function moveSelectedFile(targetFolder){
 
-if(!zip||!selectedPath)return;
+if(!zip||!moveModePath)return;
 
-const source=normalizePath(selectedPath);
+const source=normalizePath(moveModePath);
 const target=normalizePath(targetFolder);
 
 const name=baseName(source);
@@ -1083,6 +1205,7 @@ const newPath=target
 if(newPath===source){
 
 moveModePath="";
+moveTargetFolder="";
 
 renderTree();
 
@@ -1101,6 +1224,7 @@ const entry=zip.file(source);
 if(!entry){
 
 moveModePath="";
+moveTargetFolder="";
 
 renderTree();
 
@@ -1115,6 +1239,7 @@ zip.file(newPath,data);
 
 selectedPath=newPath;
 moveModePath="";
+moveTargetFolder="";
 
 await refreshAddonDetection();
 
@@ -1201,6 +1326,7 @@ zip.remove(path);
 selectedPath="";
 selectedType="";
 moveModePath="";
+moveTargetFolder="";
 
 editorTitle.textContent="編集";
 editorPath.textContent="";
@@ -1389,19 +1515,21 @@ const packTypes=["RP","BP"];
 
 for(const packType of packTypes){
 
-const rootCandidates=entries.filter(path=>{
+const candidates=entries.filter(path=>{
+
 const parts=path.split("/");
 
 return parts.some(
 part=>part.toUpperCase()===packType
 );
+
 });
 
-if(!rootCandidates.length)continue;
+if(!candidates.length)continue;
 
 let packRoot="";
 
-for(const path of rootCandidates){
+for(const path of candidates){
 
 const parts=path.split("/");
 
@@ -1415,111 +1543,47 @@ const candidate=parts
 .slice(0,index+1)
 .join("/");
 
-if(!packRoot||candidate.length<packRoot.length){
+if(
+!packRoot||
+candidate.length<packRoot.length
+){
+
 packRoot=candidate;
+
 }
 }
 
 if(!packRoot)continue;
 
-const sourceEntries=entries.filter(path=>{
-return path===packRoot||
-path.startsWith(packRoot+"/");
-});
+const manifestCandidates=entries.filter(path=>{
 
-const manifestCandidates=sourceEntries.filter(path=>{
-return baseName(path).toLowerCase()==="manifest.json";
+const parts=path.split("/");
+
+const packIndex=parts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+return (
+packIndex>=0&&
+parts[parts.length-1].toLowerCase()==="manifest.json"
+);
+
 });
 
 if(!manifestCandidates.length)continue;
 
-let manifestPath=manifestCandidates
-.sort((a,b)=>a.length-b.length)[0];
+const packEntries=entries.filter(path=>{
 
-const manifestParts=manifestPath.split("/");
-
-const rootParts=packRoot.split("/");
-
-const manifestIndex=manifestParts.findIndex(
-part=>part.toUpperCase()===packType
+return (
+path===packRoot||
+path.startsWith(packRoot+"/")
 );
 
-if(manifestIndex<0)continue;
-
-const afterPack=manifestParts.slice(manifestIndex+1,-1);
-
-let stripCount=afterPack.length;
-
-if(stripCount>0){
-
-const wrapper=afterPack.join("/");
-
-const wrapperPrefix=packRoot+"/"+wrapper+"/";
-
-const wrapperEntries=sourceEntries.filter(path=>{
-return path===packRoot+"/"+wrapper||
-path.startsWith(wrapperPrefix);
 });
 
-if(wrapperEntries.length>0){
+const packIndex=packRoot.split("/").length-1;
 
-const newEntries=[];
-
-for(const path of entries){
-
-if(path===packRoot+"/"+wrapper){
-continue;
-}
-
-if(path.startsWith(wrapperPrefix)){
-
-const rest=path.slice(wrapperPrefix.length);
-
-newEntries.push({
-oldPath:path,
-newPath:packRoot+"/"+rest
-});
-
-}
-}
-
-for(const item of newEntries){
-
-const entry=zip.file(item.oldPath);
-
-if(!entry)continue;
-
-const data=await entry.async("uint8array");
-
-if(!zip.file(item.newPath)){
-zip.file(item.newPath,data);
-}
-
-zip.remove(item.oldPath);
-}
-
-}
-}
-
-const refreshed=[];
-
-zip.forEach((path,entry)=>{
-
-if(!entry.dir){
-
-refreshed.push(
-normalizePath(path)
-);
-
-}
-});
-
-const actualPackPaths=refreshed.filter(path=>{
-return path===packRoot||
-path.startsWith(packRoot+"/");
-});
-
-for(const oldPath of actualPackPaths){
+for(const oldPath of packEntries){
 
 const parts=oldPath.split("/");
 
@@ -1591,7 +1655,9 @@ packRoots=[...roots];
 
 addonDetected=
 names.includes("manifest.json")||
-names.some(x=>x.endsWith("/manifest.json"));
+names.some(
+x=>x.endsWith("/manifest.json")
+);
 
 return addonDetected;
 }
@@ -1619,6 +1685,8 @@ await normalizePackStructure();
 selectedPath="";
 selectedType="";
 moveModePath="";
+moveTargetFolder="";
+openFolders.clear();
 
 editorTitle.textContent="編集";
 editorPath.textContent="";
