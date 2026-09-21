@@ -636,6 +636,34 @@ a.pop();
 return a.join("/");
 }
 
+function isAllowedFile(path){
+const p=normalizePath(path).toLowerCase();
+
+return [
+".json",
+".js",
+".mcfunction",
+".lang",
+".txt",
+".md",
+".xml",
+".html",
+".css",
+".ts",
+".mcmeta",
+".properties",
+".material",
+".render_controller",
+".geo.json",
+".png",
+".jpg",
+".jpeg",
+".webp",
+".gif",
+".svg"
+].some(x=>p.endsWith(x));
+}
+
 function isImage(path){
 return /\.(png|jpe?g|webp|gif|svg)$/i.test(path);
 }
@@ -822,24 +850,32 @@ files:[]
 const entries=[];
 
 zip.forEach((path,entry)=>{
-if(entry.dir)return;
 
 const normalized=normalizePath(path);
 
 if(!normalized)return;
 
-entries.push(normalized);
+entries.push({
+path:normalized,
+dir:entry.dir
 });
 
-entries.sort((a,b)=>a.localeCompare(b));
+});
 
-for(const path of entries){
+entries.sort((a,b)=>a.path.localeCompare(b.path));
 
+for(const item of entries){
+
+const path=item.path;
 const parts=path.split("/");
 
 let node=root;
 
-for(let i=0;i<parts.length-1;i++){
+const end=item.dir
+?parts.length
+:parts.length-1;
+
+for(let i=0;i<end;i++){
 
 const part=parts[i];
 
@@ -853,7 +889,10 @@ files:[]
 node=node.folders.get(part);
 }
 
+if(!item.dir){
 node.files.push(parts[parts.length-1]);
+}
+
 }
 
 return root;
@@ -996,7 +1035,7 @@ await openFile(fullPath);
 
 fragment.appendChild(button);
 
-if(!moveModePath){
+if(selectedPath===fullPath&&!moveModePath){
 
 const box=document.createElement("div");
 
@@ -1010,10 +1049,8 @@ move.onclick=e=>{
 
 e.stopPropagation();
 
-selectedPath=fullPath;
-selectedType=isImage(fullPath)?"image":"text";
-moveModePath=fullPath;
-moveTargetFolder=directoryName(fullPath);
+moveModePath=selectedPath;
+moveTargetFolder=directoryName(selectedPath);
 
 renderTree();
 };
@@ -1023,12 +1060,7 @@ const rename=document.createElement("button");
 rename.textContent="ファイル名変更";
 
 rename.onclick=e=>{
-
 e.stopPropagation();
-
-selectedPath=fullPath;
-selectedType=isImage(fullPath)?"image":"text";
-
 renameSelected();
 };
 
@@ -1037,12 +1069,7 @@ const del=document.createElement("button");
 del.textContent="削除";
 
 del.onclick=e=>{
-
 e.stopPropagation();
-
-selectedPath=fullPath;
-selectedType=isImage(fullPath)?"image":"text";
-
 deleteSelected();
 };
 
@@ -1051,8 +1078,8 @@ box.appendChild(rename);
 box.appendChild(del);
 
 fragment.appendChild(box);
-}
 
+}
 }
 
 }
@@ -1335,7 +1362,7 @@ function createNewFile(){
 if(!zip)return;
 
 const name=prompt(
-"構成ファイル名を入力してください\n例: scripts/main.js / functions/start.mcfunction"
+"新規フォルダ名を入力してください"
 );
 
 if(!name)return;
@@ -1351,19 +1378,21 @@ parts.some(part=>part==="."||part==="..")||
 path.endsWith("/")
 ){
 
-alert("ファイル名またはパスが不正です。");
+alert("フォルダ名またはパスが不正です。");
 
 return;
 }
 
-if(zip.file(path)){
+if(zip.file(path)||zip.file(path+"/")){
 
-alert("同名のファイルが存在します。");
+alert("同名のフォルダが存在します。");
 
 return;
 }
 
-zip.file(path,"");
+zip.folder(path);
+
+openFolders.add(path);
 
 renderTree();
 
@@ -1388,18 +1417,6 @@ if(!path.toLowerCase().endsWith(".json")){
 path+=".json";
 }
 
-const parts=path.split("/");
-
-if(
-parts.some(part=>part==="."||part==="..")||
-path.endsWith("/")
-){
-
-alert("ファイル名またはパスが不正です。");
-
-return;
-}
-
 if(zip.file(path)){
 
 alert("同名のファイルが存在します。");
@@ -1411,6 +1428,12 @@ zip.file(
 path,
 JSON.stringify({},null,2)
 );
+
+const directory=directoryName(path);
+
+if(directory){
+openFolders.add(directory);
+}
 
 renderTree();
 
