@@ -847,37 +847,30 @@ folders:new Map(),
 files:[]
 };
 
-const entries=[];
+const directoryEntries=[];
+const fileEntries=[];
 
 zip.forEach((path,entry)=>{
 
-const normalized=normalizePath(path);
+const normalized=normalizePath(path).replace(/\/$/,"");
 
 if(!normalized)return;
 
-entries.push({
-path:normalized,
-dir:entry.dir
-});
+if(entry.dir){
+directoryEntries.push(normalized);
+}else{
+fileEntries.push(normalized);
+}
 
 });
 
-entries.sort((a,b)=>a.path.localeCompare(b.path));
-
-for(const item of entries){
-
-const path=item.path;
-const parts=path.split("/");
+function ensureFolder(pathParts){
 
 let node=root;
 
-const end=item.dir
-?parts.length
-:parts.length-1;
+for(const part of pathParts){
 
-for(let i=0;i<end;i++){
-
-const part=parts[i];
+if(!part)continue;
 
 if(!node.folders.has(part)){
 node.folders.set(part,{
@@ -889,8 +882,39 @@ files:[]
 node=node.folders.get(part);
 }
 
-if(!item.dir){
-node.files.push(parts[parts.length-1]);
+}
+
+for(const path of directoryEntries){
+
+ensureFolder(path.split("/"));
+
+}
+
+fileEntries.sort((a,b)=>a.localeCompare(b));
+
+for(const path of fileEntries){
+
+const parts=path.split("/");
+
+const file=parts.pop();
+
+let node=root;
+
+for(const part of parts){
+
+if(!node.folders.has(part)){
+node.folders.set(part,{
+folders:new Map(),
+files:[]
+});
+}
+
+node=node.folders.get(part);
+
+}
+
+if(file){
+node.files.push(file);
 }
 
 }
@@ -1078,7 +1102,6 @@ box.appendChild(rename);
 box.appendChild(del);
 
 fragment.appendChild(box);
-
 }
 }
 
@@ -1361,29 +1384,41 @@ function createNewFile(){
 
 if(!zip)return;
 
-const name=prompt(
-"新規フォルダ名を入力してください"
-);
+const name=prompt("新規フォルダ名を入力してください");
 
 if(!name)return;
 
-let path=normalizePath(name);
+let path=normalizePath(name).replace(/\/+$/,"");
 
 if(!path)return;
 
 const parts=path.split("/");
 
-if(
-parts.some(part=>part==="."||part==="..")||
-path.endsWith("/")
-){
+if(parts.some(part=>part==="."||part==="..")){
 
-alert("フォルダ名またはパスが不正です。");
+alert("フォルダ名が不正です。");
 
 return;
 }
 
-if(zip.file(path)||zip.file(path+"/")){
+let exists=false;
+
+zip.forEach((entryPath,entry)=>{
+
+const normalized=normalizePath(entryPath).replace(/\/+$/,"");
+
+if(
+normalized===path||
+normalized.startsWith(path+"/")
+){
+
+exists=true;
+
+}
+
+});
+
+if(exists){
 
 alert("同名のフォルダが存在します。");
 
@@ -1391,8 +1426,6 @@ return;
 }
 
 zip.folder(path);
-
-openFolders.add(path);
 
 renderTree();
 
@@ -1428,12 +1461,6 @@ zip.file(
 path,
 JSON.stringify({},null,2)
 );
-
-const directory=directoryName(path);
-
-if(directory){
-openFolders.add(directory);
-}
 
 renderTree();
 
@@ -1524,8 +1551,6 @@ async function normalizePackStructure(){
 
 if(!zip)return;
 
-for(const packType of ["RP","BP"]){
-
 const entries=[];
 
 zip.forEach((path,entry)=>{
@@ -1539,6 +1564,10 @@ entries.push(normalized);
 }
 
 });
+
+const packTypes=["RP","BP"];
+
+for(const packType of packTypes){
 
 const candidates=entries.filter(path=>{
 
@@ -1580,6 +1609,23 @@ packRoot=candidate;
 
 if(!packRoot)continue;
 
+const manifestCandidates=entries.filter(path=>{
+
+const parts=path.split("/");
+
+const packIndex=parts.findIndex(
+part=>part.toUpperCase()===packType
+);
+
+return (
+packIndex>=0&&
+parts[parts.length-1].toLowerCase()==="manifest.json"
+);
+
+});
+
+if(!manifestCandidates.length)continue;
+
 const packEntries=entries.filter(path=>{
 
 return (
@@ -1589,43 +1635,7 @@ path.startsWith(packRoot+"/")
 
 });
 
-const manifestCandidates=packEntries.filter(path=>{
-
-const parts=path.split("/");
-
-const index=parts.findIndex(
-part=>part.toUpperCase()===packType
-);
-
-return (
-index>=0&&
-parts[parts.length-1].toLowerCase()==="manifest.json"
-);
-
-});
-
-let wrapperParts=[];
-
-if(manifestCandidates.length){
-
-const manifestPath=manifestCandidates
-.sort((a,b)=>a.length-b.length)[0];
-
-const parts=manifestPath.split("/");
-
-const index=parts.findIndex(
-part=>part.toUpperCase()===packType
-);
-
-if(index>=0){
-
-wrapperParts=parts.slice(
-index+1,
-parts.length-1
-);
-
-}
-}
+const packIndex=packRoot.split("/").length-1;
 
 for(const oldPath of packEntries){
 
@@ -1637,33 +1647,9 @@ part=>part.toUpperCase()===packType
 
 if(index<0)continue;
 
-let relativeParts=parts.slice(index+1);
-
-if(wrapperParts.length){
-
-let matches=true;
-
-for(let i=0;i<wrapperParts.length;i++){
-
-if(relativeParts[i]!==wrapperParts[i]){
-matches=false;
-break;
-}
-
-}
-
-if(matches){
-
-relativeParts=relativeParts.slice(
-wrapperParts.length
-);
-
-}
-}
-
-const newPath=relativeParts.length
-?packType+"/"+relativeParts.join("/")
-:packType;
+const newPath=parts
+.slice(index)
+.join("/");
 
 if(oldPath===newPath)continue;
 
