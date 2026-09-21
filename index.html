@@ -111,6 +111,12 @@ font-weight:bold;
 display:flex;
 align-items:center;
 gap:8px;
+min-width:0;
+overflow:hidden;
+}
+
+.file-tree-title>span{
+flex-shrink:0;
 }
 
 .tree-content{
@@ -248,9 +254,20 @@ transform:translateY(0);
 display:flex;
 gap:6px;
 align-items:center;
+min-width:0;
+overflow-x:auto;
+overflow-y:hidden;
+flex:1;
+padding-bottom:1px;
+scrollbar-width:none;
+}
+
+.tree-tools::-webkit-scrollbar{
+display:none;
 }
 
 .tree-tools button{
+flex:0 0 auto;
 padding:6px 8px;
 border:1px solid #444;
 border-radius:7px;
@@ -439,15 +456,16 @@ width:100%;
 }
 
 .file-tree-title{
-flex-wrap:wrap;
+align-items:center;
 }
 
 .tree-tools{
-width:100%;
+flex:1;
+min-width:0;
 }
 
 .tree-tools button{
-flex:1;
+flex:0 0 auto;
 }
 
 }
@@ -1259,10 +1277,19 @@ alert("自分自身またはその中には移動できません。");
 return;
 }
 
-if(
-zip.file(newPath)||
-zip.folder(newPath)
-){
+let duplicate=false;
+
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path).replace(/\/$/,"");
+
+if(normalized===newPath){
+duplicate=true;
+}
+
+});
+
+if(duplicate){
 
 alert("同名の項目が存在します。");
 
@@ -1405,10 +1432,19 @@ const newPath=directory
 
 if(newPath===oldPath)return;
 
-if(
-zip.file(newPath)||
-zip.folder(newPath)
-){
+let duplicate=false;
+
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path).replace(/\/$/,"");
+
+if(normalized===newPath){
+duplicate=true;
+}
+
+});
+
+if(duplicate){
 
 alert("同名の項目が存在します。");
 
@@ -1689,9 +1725,38 @@ new Uint8Array(data)
 );
 }
 
+removeUnnecessaryFiles();
+
 await refreshAddonDetection();
 
 renderTree();
+}
+
+function isUnnecessaryPath(path){
+
+const normalized=normalizePath(path).replace(/\/+$/,"");
+
+if(!normalized)return false;
+
+const parts=normalized.split("/");
+
+for(const part of parts){
+
+if(
+part.startsWith("__")||
+part.startsWith("._")||
+part===".DS_Store"||
+part==="Thumbs.db"||
+part==="Desktop.ini"
+){
+
+return true;
+
+}
+
+}
+
+return false;
 }
 
 function removeUnnecessaryFiles(){
@@ -1704,37 +1769,20 @@ zip.forEach((path,entry)=>{
 
 const normalized=normalizePath(path);
 
-if(!normalized)return;
-
-const parts=normalized.split("/");
-
-for(const part of parts){
-
-if(part.startsWith("__")){
+if(isUnnecessaryPath(normalized)){
 
 removeList.push(normalized);
 
-break;
 }
 
-if(
-part===".DS_Store"||
-part==="Thumbs.db"||
-part==="Desktop.ini"
-){
-
-removeList.push(normalized);
-
-break;
-}
-
-}
 });
 
 const unique=[...new Set(removeList)];
 
 for(const path of unique){
+
 zip.remove(path);
+
 }
 }
 
@@ -1927,6 +1975,8 @@ removeUnnecessaryFiles();
 
 await normalizePackStructure();
 
+removeUnnecessaryFiles();
+
 selectedPath="";
 selectedType="";
 moveModePath="";
@@ -2019,6 +2069,8 @@ baseName(selectedPath)
 async function makeZip(){
 
 if(!zip)return null;
+
+removeUnnecessaryFiles();
 
 return await zip.generateAsync({
 type:"blob",
