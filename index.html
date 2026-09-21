@@ -107,6 +107,42 @@ border-bottom:1px solid #292929;
 font-weight:bold;
 }
 
+.file-tree-title{
+display:flex;
+align-items:center;
+gap:6px;
+flex-wrap:wrap;
+}
+
+.tree-title-text{
+flex-shrink:0;
+}
+
+.tree-title-tools{
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+
+.tree-title-tools button{
+padding:6px 8px;
+border:1px solid #444;
+border-radius:7px;
+background:#1a1a1a;
+color:#fff;
+font-size:11px;
+cursor:pointer;
+}
+
+.tree-title-tools button:hover{
+background:#252525;
+}
+
+.tree-title-tools button:disabled{
+opacity:.4;
+cursor:not-allowed;
+}
+
 .tree-content{
 padding:8px;
 }
@@ -184,26 +220,11 @@ background:#252525;
 }
 
 .file-operations{
-display:flex;
-gap:6px;
-padding:2px 8px 8px;
-animation:filePop .18s ease;
+display:none;
 }
 
 .file-operations button{
-flex:1;
-min-width:0;
-padding:7px 5px;
-border:1px solid #444;
-border-radius:7px;
-background:#1a1a1a;
-color:#fff;
-font-size:12px;
-cursor:pointer;
-}
-
-.file-operations button:hover{
-background:#252525;
+display:none;
 }
 
 .move-panel{
@@ -501,18 +522,24 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 <div class="file-tree">
 
 <div class="file-tree-title">
+
+<span class="tree-title-text">
 ファイル構成
-</div>
+</span>
 
-<div class="tree-content" id="fileTree">
+<div class="tree-title-tools">
 
-<div class="editor-empty">
-ファイルを選択してください
-</div>
+<button id="treeMoveButton" disabled>
+移動
+</button>
 
-</div>
+<button id="treeRenameButton" disabled>
+名前変更
+</button>
 
-<div class="tree-tools" id="treeTools">
+<button id="treeDeleteButton" disabled>
+削除
+</button>
 
 <button id="newFileButton" disabled>
 新規ファイル
@@ -525,6 +552,20 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 <button id="uploadButton" disabled>
 アップロード
 </button>
+
+</div>
+
+</div>
+
+<div class="tree-content" id="fileTree">
+
+<div class="editor-empty">
+ファイルを選択してください
+</div>
+
+</div>
+
+<div class="tree-tools" id="treeTools">
 
 </div>
 
@@ -599,6 +640,9 @@ const treeTools=document.getElementById("treeTools");
 const newFileButton=document.getElementById("newFileButton");
 const newJsonButton=document.getElementById("newJsonButton");
 const uploadButton=document.getElementById("uploadButton");
+const treeMoveButton=document.getElementById("treeMoveButton");
+const treeRenameButton=document.getElementById("treeRenameButton");
+const treeDeleteButton=document.getElementById("treeDeleteButton");
 
 let zip=null;
 let selectedPath="";
@@ -680,6 +724,12 @@ treeTools.classList.toggle("visible",visible);
 newFileButton.disabled=!visible;
 newJsonButton.disabled=!visible;
 uploadButton.disabled=!visible;
+
+const selected=!!zip&&!!selectedPath&&!moveModePath;
+
+treeMoveButton.disabled=!selected;
+treeRenameButton.disabled=!selected;
+treeDeleteButton.disabled=!selected;
 }
 
 function clearImageUrl(){
@@ -932,6 +982,8 @@ fileTree.innerHTML=`
 </div>
 `;
 
+updateTreeTools();
+
 return;
 }
 
@@ -982,6 +1034,10 @@ button.className=
 button.dataset.path=fullPath;
 button.dataset.folder="true";
 
+if(selectedPath===fullPath){
+button.classList.add("selected-folder");
+}
+
 if(moveTargetFolder===fullPath){
 button.classList.add("selected-folder");
 }
@@ -995,6 +1051,14 @@ button.onclick=async()=>{
 
 if(moveModePath){
 
+if(
+fullPath===moveModePath||
+fullPath.startsWith(moveModePath+"/")
+){
+
+return;
+}
+
 moveTargetFolder=fullPath;
 
 renderTree();
@@ -1002,11 +1066,14 @@ renderTree();
 return;
 }
 
-if(open){
-openFolders.delete(fullPath);
-}else{
-openFolders.add(fullPath);
-}
+selectedPath=fullPath;
+selectedType="folder";
+
+editorTitle.textContent=folderName;
+editorPath.textContent=fullPath;
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
 
 renderTree();
 };
@@ -1059,50 +1126,6 @@ await openFile(fullPath);
 
 fragment.appendChild(button);
 
-if(selectedPath===fullPath&&!moveModePath){
-
-const box=document.createElement("div");
-
-box.className="file-operations";
-
-const move=document.createElement("button");
-
-move.textContent="移動";
-
-move.onclick=e=>{
-
-e.stopPropagation();
-
-moveModePath=selectedPath;
-moveTargetFolder=directoryName(selectedPath);
-
-renderTree();
-};
-
-const rename=document.createElement("button");
-
-rename.textContent="ファイル名変更";
-
-rename.onclick=e=>{
-e.stopPropagation();
-renameSelected();
-};
-
-const del=document.createElement("button");
-
-del.textContent="削除";
-
-del.onclick=e=>{
-e.stopPropagation();
-deleteSelected();
-};
-
-box.appendChild(move);
-box.appendChild(rename);
-box.appendChild(del);
-
-fragment.appendChild(box);
-}
 }
 
 }
@@ -1231,6 +1254,22 @@ if(!zip||!moveModePath)return;
 const source=normalizePath(moveModePath);
 const target=normalizePath(targetFolder);
 
+if(
+target===source||
+target.startsWith(source+"/")
+){
+
+alert("同じフォルダ内、またはその中には移動できません。");
+
+return;
+}
+
+const sourceIsFolder=
+zip.file(source)===null &&
+[...Object.keys(zip.files)].some(path=>
+normalizePath(path).replace(/\/$/,"")===source
+);
+
 const name=baseName(source);
 
 const newPath=target
@@ -1254,6 +1293,82 @@ alert("同名のファイルが存在します。");
 return;
 }
 
+if(sourceIsFolder){
+
+const entries=[];
+
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path);
+
+if(
+normalized===source||
+normalized.startsWith(source+"/")
+){
+
+entries.push({
+path:normalized,
+dir:entry.dir
+});
+
+}
+
+});
+
+if(!entries.length){
+
+moveModePath="";
+moveTargetFolder="";
+
+renderTree();
+
+return;
+}
+
+const prefix=source+"/";
+const newPrefix=newPath+"/";
+
+for(const item of entries){
+
+const relative=
+item.path===source
+?""
+:item.path.slice(prefix.length);
+
+const destination=
+relative
+?newPrefix+relative
+:newPath;
+
+if(item.dir){
+
+zip.folder(destination);
+
+}else{
+
+const entry=zip.file(item.path);
+
+if(!entry)continue;
+
+const data=await entry.async("uint8array");
+
+zip.file(destination,data);
+
+}
+
+}
+
+for(const item of entries){
+
+zip.remove(item.path);
+
+}
+
+selectedPath=newPath;
+selectedType="folder";
+
+}else{
+
 const entry=zip.file(source);
 
 if(!entry){
@@ -1273,14 +1388,16 @@ zip.remove(source);
 zip.file(newPath,data);
 
 selectedPath=newPath;
+selectedType="file";
+
+}
+
 moveModePath="";
 moveTargetFolder="";
 
 await refreshAddonDetection();
 
 renderTree();
-
-await openFile(newPath);
 }
 
 async function renameSelected(){
@@ -1291,7 +1408,7 @@ const oldPath=normalizePath(selectedPath);
 const oldName=baseName(oldPath);
 
 const input=prompt(
-"新しいファイル名を入力してください",
+"新しい名前を入力してください",
 oldName
 );
 
@@ -1305,7 +1422,7 @@ newName=newName.replace(/[\\\/]/g,"");
 
 if(!newName){
 
-alert("ファイル名が不正です。");
+alert("名前が不正です。");
 
 return;
 }
@@ -1317,6 +1434,85 @@ const newPath=directory
 :newName;
 
 if(newPath===oldPath)return;
+
+const isFolder=
+!zip.file(oldPath)&&
+[...Object.keys(zip.files)].some(path=>
+normalizePath(path).replace(/\/$/,"")===oldPath
+);
+
+if(isFolder){
+
+const entries=[];
+
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path);
+
+if(
+normalized===oldPath||
+normalized.startsWith(oldPath+"/")
+){
+
+entries.push({
+path:normalized,
+dir:entry.dir
+});
+
+}
+
+});
+
+if(!entries.length)return;
+
+const prefix=oldPath+"/";
+const newPrefix=newPath+"/";
+
+for(const item of entries){
+
+const relative=
+item.path===oldPath
+?""
+:item.path.slice(prefix.length);
+
+const destination=
+relative
+?newPrefix+relative
+:newPath;
+
+if(item.dir){
+
+zip.folder(destination);
+
+}else{
+
+const entry=zip.file(item.path);
+
+if(!entry)continue;
+
+const data=await entry.async("uint8array");
+
+zip.file(destination,data);
+
+}
+
+}
+
+for(const item of entries){
+
+zip.remove(item.path);
+
+}
+
+selectedPath=newPath;
+selectedType="folder";
+
+await refreshAddonDetection();
+
+renderTree();
+
+return;
+}
 
 if(zip.file(newPath)){
 
@@ -1350,13 +1546,46 @@ if(!zip||!selectedPath)return;
 
 const path=selectedPath;
 
+const isFolder=
+!zip.file(path)&&
+[...Object.keys(zip.files)].some(item=>
+normalizePath(item).replace(/\/$/,"")===path
+);
+
 if(!confirm(
 `「${baseName(path)}」を削除しますか？`
 )){
 return;
 }
 
+if(isFolder){
+
+const removeList=[];
+
+zip.forEach((entryPath,entry)=>{
+
+const normalized=normalizePath(entryPath);
+
+if(
+normalized===path||
+normalized.startsWith(path+"/")
+){
+
+removeList.push(normalized);
+
+}
+
+});
+
+for(const item of removeList){
+zip.remove(item);
+}
+
+}else{
+
 zip.remove(path);
+
+}
 
 selectedPath="";
 selectedType="";
@@ -1811,7 +2040,7 @@ URL.revokeObjectURL(url);
 
 async function downloadSelectedFile(){
 
-if(!zip||!selectedPath)return;
+if(!zip||!selectedPath||selectedType==="folder")return;
 
 const entry=zip.file(selectedPath);
 
@@ -1893,6 +2122,23 @@ createNewJson();
 
 uploadButton.onclick=()=>{
 newFileInput.click();
+};
+
+treeMoveButton.onclick=()=>{
+if(!selectedPath)return;
+
+moveModePath=selectedPath;
+moveTargetFolder=directoryName(selectedPath);
+
+renderTree();
+};
+
+treeRenameButton.onclick=()=>{
+renameSelected();
+};
+
+treeDeleteButton.onclick=()=>{
+deleteSelected();
 };
 
 newFileInput.addEventListener(
