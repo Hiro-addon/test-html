@@ -241,56 +241,6 @@ cursor:pointer;
 background:#252525;
 }
 
-.unnecessary-files{
-display:none;
-padding:10px 8px 8px;
-border-top:1px solid #292929;
-}
-
-.unnecessary-files.visible{
-display:block;
-}
-
-.unnecessary-files-title{
-font-size:12px;
-color:#aaa;
-margin-bottom:8px;
-}
-
-.unnecessary-file{
-display:flex;
-align-items:center;
-gap:8px;
-padding:8px;
-margin:4px 0;
-border:1px solid #333;
-border-radius:8px;
-background:#151515;
-font-size:12px;
-}
-
-.unnecessary-file-name{
-flex:1;
-min-width:0;
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
-}
-
-.unnecessary-file-delete{
-padding:6px 9px;
-border:1px solid #444;
-border-radius:7px;
-background:#1a1a1a;
-color:#fff;
-font-size:12px;
-cursor:pointer;
-}
-
-.unnecessary-file-delete:hover{
-background:#252525;
-}
-
 .editor-path{
 display:block;
 margin-top:4px;
@@ -530,16 +480,6 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 
 </div>
 
-<div class="unnecessary-files" id="unnecessaryFiles">
-
-<div class="unnecessary-files-title">
-不要ファイル
-</div>
-
-<div id="unnecessaryFilesList"></div>
-
-</div>
-
 </div>
 
 <div class="editor-panel">
@@ -611,8 +551,6 @@ const treeTools=document.getElementById("treeTools");
 const newFileButton=document.getElementById("newFileButton");
 const newJsonButton=document.getElementById("newJsonButton");
 const uploadButton=document.getElementById("uploadButton");
-const unnecessaryFiles=document.getElementById("unnecessaryFiles");
-const unnecessaryFilesList=document.getElementById("unnecessaryFilesList");
 
 let zip=null;
 let selectedPath="";
@@ -896,72 +834,6 @@ node.files.push(parts[parts.length-1]);
 return root;
 }
 
-function renderUnnecessaryFiles(){
-if(!zip){
-unnecessaryFiles.classList.remove("visible");
-unnecessaryFilesList.innerHTML="";
-return;
-}
-
-const files=[];
-
-zip.forEach((path,entry)=>{
-if(!entry.dir){
-files.push(normalizePath(path));
-}
-});
-
-const unnecessary=files.filter(path=>{
-const name=baseName(path).toLowerCase();
-
-return [
-".ds_store",
-"thumbs.db",
-"desktop.ini",
-"__macosx"
-].some(x=>
-name===x||
-path.toLowerCase().startsWith("__macosx/")
-);
-});
-
-unnecessaryFilesList.innerHTML="";
-
-if(!unnecessary.length){
-unnecessaryFiles.classList.remove("visible");
-return;
-}
-
-unnecessaryFiles.classList.add("visible");
-
-for(const path of unnecessary){
-const row=document.createElement("div");
-row.className="unnecessary-file";
-
-const name=document.createElement("div");
-name.className="unnecessary-file-name";
-name.textContent=path;
-
-const button=document.createElement("button");
-button.className="unnecessary-file-delete";
-button.textContent="削除";
-
-button.onclick=()=>{
-if(!zip)return;
-
-zip.remove(path);
-
-renderTree();
-renderUnnecessaryFiles();
-};
-
-row.appendChild(name);
-row.appendChild(button);
-
-unnecessaryFilesList.appendChild(row);
-}
-}
-
 function renderTree(){
 if(!zip){
 fileTree.innerHTML=`
@@ -970,7 +842,6 @@ fileTree.innerHTML=`
 </div>
 `;
 
-renderUnnecessaryFiles();
 return;
 }
 
@@ -1120,7 +991,6 @@ renderNode(root,"",0);
 fileTree.appendChild(fragment);
 
 updateTreeTools();
-renderUnnecessaryFiles();
 }
 
 function escapeHtml(value){
@@ -1394,6 +1264,39 @@ await refreshAddonDetection();
 renderTree();
 }
 
+function removeUnnecessaryFiles(){
+if(!zip)return;
+
+const removeList=[];
+
+zip.forEach((path,entry)=>{
+const normalized=normalizePath(path);
+const parts=normalized.split("/");
+
+for(const part of parts){
+if(part.startsWith("__")){
+removeList.push(normalized);
+break;
+}
+
+if(
+part===".DS_Store"||
+part==="Thumbs.db"||
+part==="Desktop.ini"
+){
+removeList.push(normalized);
+break;
+}
+}
+});
+
+const unique=[...new Set(removeList)];
+
+for(const path of unique){
+zip.remove(path);
+}
+}
+
 async function refreshAddonDetection(){
 if(!zip){
 addonDetected=false;
@@ -1443,6 +1346,8 @@ const data=await file.arrayBuffer();
 
 zip=await JSZip.loadAsync(data);
 
+removeUnnecessaryFiles();
+
 selectedPath="";
 selectedType="";
 moveModePath="";
@@ -1465,7 +1370,6 @@ await refreshAddonDetection();
 
 renderTree();
 updateTreeTools();
-renderUnnecessaryFiles();
 
 }catch(error){
 
@@ -1489,7 +1393,6 @@ mcpackButton.disabled=true;
 zipButton.disabled=true;
 
 updateTreeTools();
-renderUnnecessaryFiles();
 
 alert("ファイルの読み込みに失敗しました。");
 }
