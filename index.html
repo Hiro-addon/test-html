@@ -104,7 +104,7 @@ padding:8px;
 .tree-item{
 display:block;
 width:100%;
-padding:10px 10px;
+padding:10px;
 margin:2px 0;
 border:0;
 border-radius:8px;
@@ -218,6 +218,7 @@ display:flex;
 gap:8px;
 padding:10px;
 border-top:1px solid #292929;
+flex-wrap:wrap;
 }
 
 button.action{
@@ -234,10 +235,25 @@ opacity:.4;
 cursor:not-allowed;
 }
 
+button.action.primary{
+background:#fff;
+color:#111;
+border-color:#fff;
+}
+
 @media(max-width:700px){
 
 .editor-layout{
 grid-template-columns:1fr;
+}
+
+.actions{
+display:grid;
+grid-template-columns:1fr;
+}
+
+button.action{
+width:100%;
 }
 
 }
@@ -323,8 +339,16 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 保存
 </button>
 
-<button class="action" id="downloadButton" disabled>
-書き出し
+<button class="action" id="fileDownloadButton" disabled>
+このファイルを書き出し
+</button>
+
+<button class="action primary" id="mcpackButton" disabled>
+MCAddon / MCPackとして書き出し
+</button>
+
+<button class="action" id="zipButton" disabled>
+ZIPとして書き出し
 </button>
 
 </div>
@@ -344,12 +368,15 @@ const editorTitle=document.getElementById("editorTitle");
 const editorPath=document.getElementById("editorPath");
 const editorContent=document.getElementById("editorContent");
 const saveButton=document.getElementById("saveButton");
-const downloadButton=document.getElementById("downloadButton");
+const fileDownloadButton=document.getElementById("fileDownloadButton");
+const mcpackButton=document.getElementById("mcpackButton");
+const zipButton=document.getElementById("zipButton");
 
 let zip=null;
 let selectedPath="";
 let selectedType="";
 let outputName="edited.zip";
+let originalExtension=".zip";
 
 
 
@@ -415,10 +442,10 @@ lower.endsWith("/.ds_store")||
 lower===".ds_store"||
 lower.endsWith("/thumbs.db")||
 lower==="thumbs.db"||
-lower.endsWith(".db")||
 lower.endsWith(".bak")||
 lower.endsWith(".tmp")||
-lower.endsWith(".log")
+lower.endsWith(".log")||
+lower.endsWith(".db")
 ){
 return false;
 }
@@ -460,13 +487,28 @@ fileName.textContent=file.name;
 
 outputName=file.name;
 
+const lower=file.name.toLowerCase();
+
+if(lower.endsWith(".mcaddon")){
+originalExtension=".mcaddon";
+}
+
+else if(lower.endsWith(".mcpack")){
+originalExtension=".mcpack";
+}
+
+else{
+originalExtension=".zip";
+}
+
 try{
 
 zip=await JSZip.loadAsync(file);
 
 renderTree();
 
-downloadButton.disabled=false;
+mcpackButton.disabled=false;
+zipButton.disabled=false;
 
 editorTitle.textContent="編集";
 
@@ -476,6 +518,7 @@ editorContent.innerHTML=
 '<div class="editor-empty">ファイル構成から項目をタップしてください</div>';
 
 saveButton.disabled=true;
+fileDownloadButton.disabled=true;
 
 }catch(error){
 
@@ -486,7 +529,10 @@ fileTree.innerHTML=
 escapeHtml(error.message)+
 '</div>';
 
-downloadButton.disabled=true;
+mcpackButton.disabled=true;
+zipButton.disabled=true;
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
 
 }
 
@@ -529,6 +575,8 @@ return;
 
 const nodes=new Map();
 
+
+
 function addFolder(path){
 
 if(!path){
@@ -539,8 +587,7 @@ if(!nodes.has(path)){
 
 nodes.set(path,{
 path:path,
-folder:true,
-children:new Set()
+folder:true
 });
 
 }
@@ -553,8 +600,7 @@ function addFile(path){
 
 nodes.set(path,{
 path:path,
-folder:false,
-children:new Set()
+folder:false
 });
 
 }
@@ -583,58 +629,42 @@ addFile(path);
 
 
 
-nodes.forEach(node=>{
+function getChildren(parent){
 
-if(node.folder){
-return;
-}
+const children=[];
+
+nodes.forEach(node=>{
 
 const parts=node.path.split("/");
 
-if(parts.length>1){
-
-const parent=parts
+const nodeParent=parts
 .slice(0,-1)
 .join("/");
 
-if(nodes.has(parent)){
-nodes.get(parent).children.add(node.path);
-}
+if(nodeParent===parent){
+
+children.push(node);
 
 }
 
 });
 
-
-
-const root=[];
-
-nodes.forEach(node=>{
-
-if(!node.path.includes("/")){
-
-root.push(node);
-
-}
-
-});
-
-
-
-function sortNodes(list){
-
-return list.sort((a,b)=>{
+children.sort((a,b)=>{
 
 if(a.folder!==b.folder){
+
 return a.folder?-1:1;
+
 }
 
-const an=a.path.split("/").pop();
-const bn=b.path.split("/").pop();
-
-return an.localeCompare(bn);
+return a.path.split("/").pop()
+.localeCompare(
+b.path.split("/").pop()
+);
 
 });
+
+return children;
 
 }
 
@@ -662,19 +692,16 @@ if(depth===1){
 button.classList.add("tree-indent-1");
 }
 
-if(depth===2){
+else if(depth===2){
 button.classList.add("tree-indent-2");
 }
-
-if(depth===3){
+else if(depth===3){
 button.classList.add("tree-indent-3");
 }
-
-if(depth===4){
+else if(depth===4){
 button.classList.add("tree-indent-4");
 }
-
-if(depth>=5){
+else if(depth>=5){
 button.classList.add("tree-indent-5");
 }
 
@@ -683,7 +710,7 @@ button.classList.add("tree-indent-5");
 const name=node.path.split("/").pop();
 
 button.innerHTML=
-(node.folder?"📁 ":"")+ 
+(node.folder?"📁 ":"")+
 (!node.folder?getIcon(node.path)+" ":"")+
 escapeHtml(name);
 
@@ -707,28 +734,7 @@ fileTree.appendChild(button);
 
 if(node.folder){
 
-const children=[];
-
-nodes.forEach(child=>{
-
-if(!child.path.includes("/")){
-return;
-}
-
-const parent=child.path
-.split("/")
-.slice(0,-1)
-.join("/");
-
-if(parent===node.path){
-
-children.push(child);
-
-}
-
-});
-
-sortNodes(children);
+const children=getChildren(node.path);
 
 children.forEach(child=>{
 
@@ -742,7 +748,7 @@ renderNode(child,depth+1);
 
 
 
-sortNodes(root);
+const root=getChildren("");
 
 root.forEach(node=>{
 
@@ -794,6 +800,7 @@ editorContent.innerHTML="";
 editorContent.appendChild(textarea);
 
 saveButton.disabled=false;
+fileDownloadButton.disabled=false;
 
 return;
 
@@ -837,6 +844,7 @@ preview.appendChild(wrap);
 editorContent.appendChild(preview);
 
 saveButton.disabled=true;
+fileDownloadButton.disabled=false;
 
 return;
 
@@ -847,6 +855,7 @@ return;
 selectedType="other";
 
 saveButton.disabled=true;
+fileDownloadButton.disabled=true;
 
 editorContent.innerHTML=
 '<div class="editor-empty">'+
@@ -891,26 +900,298 @@ saveButton.textContent="保存";
 
 
 
-downloadButton.onclick=async()=>{
+fileDownloadButton.onclick=async()=>{
+
+if(
+!zip||
+!selectedPath
+){
+return;
+}
+
+const entry=zip.file(selectedPath);
+
+if(!entry){
+return;
+}
+
+fileDownloadButton.disabled=true;
+fileDownloadButton.textContent="生成中...";
+
+try{
+
+let blob;
+
+if(selectedType==="text"){
+
+const textarea=
+document.getElementById("editorTextarea");
+
+if(textarea){
+
+zip.file(
+selectedPath,
+textarea.value
+);
+
+}
+
+blob=
+new Blob(
+[textarea?textarea.value:await entry.async("string")],
+{
+type:"text/plain"
+}
+);
+
+}else{
+
+blob=
+await entry.async("blob");
+
+}
+
+const name=
+selectedPath.split("/").pop();
+
+downloadBlob(
+blob,
+name
+);
+
+fileDownloadButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+fileDownloadButton.textContent="このファイルを書き出し";
+fileDownloadButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+fileDownloadButton.textContent="このファイルを書き出し";
+fileDownloadButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+
+
+
+function shouldKeepFile(path){
+
+return isAllowedFile(path);
+
+}
+
+
+
+async function createCleanZip(){
+
+const cleanZip=new JSZip();
+
+const entries=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir){
+return;
+}
+
+if(!shouldKeepFile(path)){
+return;
+}
+
+entries.push({
+path:path,
+entry:entry
+});
+
+});
+
+for(const item of entries){
+
+if(
+item.path===selectedPath&&
+selectedType==="text"
+){
+
+const textarea=
+document.getElementById("editorTextarea");
+
+if(textarea){
+
+cleanZip.file(
+item.path,
+textarea.value
+);
+
+continue;
+
+}
+
+}
+
+const data=
+await item.entry.async("uint8array");
+
+cleanZip.file(
+item.path,
+data
+);
+
+}
+
+return cleanZip;
+
+}
+
+
+
+mcpackButton.onclick=async()=>{
 
 if(!zip){
 return;
 }
 
-downloadButton.disabled=true;
+mcpackButton.disabled=true;
+zipButton.disabled=true;
 
-downloadButton.textContent="生成中...";
+mcpackButton.textContent="生成中...";
 
 try{
 
+const cleanZip=
+await createCleanZip();
+
 const blob=
-await zip.generateAsync({
+await cleanZip.generateAsync({
 type:"blob",
 compression:"DEFLATE",
 compressionOptions:{
 level:9
 }
 });
+
+let name=
+outputName
+.replace(/\.zip$/i,"")
+.replace(/\.mcaddon$/i,"")
+.replace(/\.mcpack$/i,"");
+
+let extension;
+
+if(originalExtension===".mcaddon"){
+
+extension=".mcaddon";
+
+}else if(originalExtension===".mcpack"){
+
+extension=".mcpack";
+
+}else{
+
+extension=".mcpack";
+
+}
+
+downloadBlob(
+blob,
+name+extension
+);
+
+mcpackButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+mcpackButton.textContent="MCAddon / MCPackとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+mcpackButton.textContent="MCAddon / MCPackとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+
+
+
+zipButton.onclick=async()=>{
+
+if(!zip){
+return;
+}
+
+mcpackButton.disabled=true;
+zipButton.disabled=true;
+
+zipButton.textContent="生成中...";
+
+try{
+
+const cleanZip=
+await createCleanZip();
+
+const blob=
+await cleanZip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:9
+}
+});
+
+let name=
+outputName
+.replace(/\.zip$/i,"")
+.replace(/\.mcaddon$/i,"")
+.replace(/\.mcpack$/i,"");
+
+downloadBlob(
+blob,
+name+".zip"
+);
+
+zipButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+zipButton.textContent="ZIPとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+zipButton.textContent="ZIPとして書き出し";
+
+mcpackButton.disabled=false;
+zipButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+
+
+
+function downloadBlob(blob,name){
 
 const url=
 URL.createObjectURL(blob);
@@ -919,8 +1200,7 @@ const a=
 document.createElement("a");
 
 a.href=url;
-
-a.download=outputName;
+a.download=name;
 
 document.body.appendChild(a);
 
@@ -934,27 +1214,7 @@ URL.revokeObjectURL(url);
 
 },1000);
 
-downloadButton.textContent="書き出し完了";
-
-setTimeout(()=>{
-
-downloadButton.textContent="書き出し";
-
-downloadButton.disabled=false;
-
-},1200);
-
-}catch(error){
-
-downloadButton.textContent="書き出し";
-
-downloadButton.disabled=false;
-
-alert(error.message);
-
 }
-
-};
 
 </script>
 
