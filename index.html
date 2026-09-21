@@ -320,6 +320,26 @@ border-color:#fff;
 display:none;
 }
 
+.drag-preview{
+position:fixed;
+z-index:99999;
+pointer-events:none;
+padding:10px 14px;
+border-radius:8px;
+background:#1c1c1c;
+border:1px solid #444;
+color:#fff;
+font-size:14px;
+box-shadow:0 8px 30px rgba(0,0,0,.5);
+transform:translate(-50%,-50%);
+white-space:nowrap;
+display:none;
+}
+
+.drag-preview.active{
+display:block;
+}
+
 @media(max-width:700px){
 
 .editor-layout{
@@ -445,6 +465,11 @@ type="file"
 multiple
 >
 
+<div
+id="dragPreview"
+class="drag-preview"
+></div>
+
 <script>
 
 const fileInput=document.getElementById("fileInput");
@@ -458,6 +483,7 @@ const saveButton=document.getElementById("saveButton");
 const fileDownloadButton=document.getElementById("fileDownloadButton");
 const mcpackButton=document.getElementById("mcpackButton");
 const zipButton=document.getElementById("zipButton");
+const dragPreview=document.getElementById("dragPreview");
 
 let zip=null;
 let selectedPath="";
@@ -483,9 +509,8 @@ let longPressPointerId=null;
 let longPressStarted=false;
 let dragPath="";
 let dragPointerId=null;
-let dragStartX=0;
-let dragStartY=0;
 let activePointers=new Set();
+let dragSourceButton=null;
 
 
 
@@ -1077,329 +1102,6 @@ return result;
 
 
 
-function beginLongPress(event,path,isFolder){
-
-if(event.pointerType==="mouse"&&event.button!==0){
-return;
-}
-
-if(activePointers.size>1){
-return;
-}
-
-clearLongPress();
-
-longPressPointerId=event.pointerId;
-longPressStarted=false;
-
-longPressTimer=setTimeout(()=>{
-
-if(activePointers.size!==1){
-return;
-}
-
-longPressStarted=true;
-dragPath=path;
-dragPointerId=event.pointerId;
-
-const target=event.currentTarget;
-
-if(target){
-target.style.opacity=".45";
-}
-
-},550);
-
-}
-
-
-
-function clearLongPress(){
-
-if(longPressTimer){
-
-clearTimeout(longPressTimer);
-longPressTimer=null;
-
-}
-
-}
-
-
-
-function findTreeButton(path){
-
-const buttons=
-fileTree.querySelectorAll(".tree-item");
-
-for(const button of buttons){
-
-if(button.dataset.path===path){
-return button;
-}
-
-}
-
-return null;
-
-}
-
-
-
-function isInsidePath(path,target){
-
-return(
-target===path||
-target.startsWith(path+"/")
-);
-
-}
-
-
-
-function moveEntry(path,targetFolder){
-
-if(!zip){
-return false;
-}
-
-path=normalizePath(path);
-targetFolder=normalizePath(targetFolder);
-
-if(!path||!zip.file(path)){
-return false;
-}
-
-if(
-targetFolder===path||
-targetFolder.startsWith(path+"/")
-){
-return false;
-}
-
-const name=
-path.split("/").pop();
-
-const newPath=
-targetFolder
-?targetFolder+"/"+name
-:name;
-
-const finalPath=
-uniquePath(newPath);
-
-if(finalPath===path){
-return false;
-}
-
-const entry=zip.file(path);
-
-if(!entry){
-return false;
-}
-
-return entry.async("uint8array")
-.then(data=>{
-
-zip.file(finalPath,data);
-zip.remove(path);
-
-if(selectedPath===path){
-
-selectedPath=finalPath;
-
-editorPath.textContent=finalPath;
-
-}
-
-return refreshAddonDetection();
-
-})
-.then(()=>{
-
-renderTree();
-
-return true;
-
-});
-
-}
-
-
-
-function finishDrag(event){
-
-clearLongPress();
-
-if(!longPressStarted){
-return;
-}
-
-const source=dragPath;
-
-longPressStarted=false;
-dragPath="";
-dragPointerId=null;
-
-const element=
-document.elementFromPoint(
-event.clientX,
-event.clientY
-);
-
-let targetFolder="";
-
-if(element){
-
-const button=
-element.closest(".tree-item");
-
-if(button&&button.dataset.path){
-
-const targetPath=
-normalizePath(button.dataset.path);
-
-if(button.dataset.folder==="true"){
-
-targetFolder=targetPath;
-
-}else{
-
-targetFolder=getDirectory(targetPath);
-
-}
-
-}
-
-}
-
-const sourceButton=findTreeButton(source);
-
-if(sourceButton){
-sourceButton.style.opacity="";
-}
-
-if(targetFolder){
-
-moveEntry(source,targetFolder)
-.then(()=>{
-
-});
-
-}
-
-}
-
-
-
-function attachTreePointerEvents(button,path,isFolder){
-
-button.dataset.path=path;
-button.dataset.folder=isFolder?"true":"false";
-
-button.addEventListener(
-"pointerdown",
-event=>{
-
-activePointers.add(event.pointerId);
-
-if(activePointers.size===1){
-
-beginLongPress(event,path,isFolder);
-
-}
-
-},
-{
-passive:true
-}
-);
-
-button.addEventListener(
-"pointermove",
-event=>{
-
-if(
-longPressPointerId===event.pointerId&&
-longPressStarted
-){
-
-event.preventDefault();
-
-}
-
-},
-{
-passive:false
-}
-);
-
-button.addEventListener(
-"pointerup",
-event=>{
-
-activePointers.delete(event.pointerId);
-
-if(
-longPressPointerId===event.pointerId&&
-longPressStarted
-){
-
-finishDrag(event);
-
-}else{
-
-clearLongPress();
-
-}
-
-},
-{
-passive:false
-}
-);
-
-button.addEventListener(
-"pointercancel",
-event=>{
-
-activePointers.delete(event.pointerId);
-
-if(longPressPointerId===event.pointerId){
-
-const sourceButton=findTreeButton(dragPath);
-
-if(sourceButton){
-sourceButton.style.opacity="";
-}
-
-}
-
-clearLongPress();
-
-longPressStarted=false;
-dragPath="";
-dragPointerId=null;
-
-},
-{
-passive:false
-}
-);
-
-button.addEventListener(
-"contextmenu",
-event=>{
-
-event.preventDefault();
-
-}
-);
-
-}
-
-
-
 function renderGroup(group){
 
 const rootButton=document.createElement("button");
@@ -1648,6 +1350,409 @@ fileTree.innerHTML=
 
 
 
+function startLongPress(event,path){
+
+if(activePointers.size!==1){
+return;
+}
+
+clearLongPress();
+
+longPressPointerId=event.pointerId;
+longPressStarted=false;
+dragPath=path;
+dragPointerId=event.pointerId;
+
+longPressTimer=setTimeout(()=>{
+
+if(
+activePointers.size!==1||
+longPressPointerId!==event.pointerId
+){
+return;
+}
+
+longPressStarted=true;
+
+dragSourceButton=findTreeButton(path);
+
+if(dragSourceButton){
+
+dragSourceButton.style.opacity=".35";
+
+}
+
+const name=
+path.split("/").pop();
+
+dragPreview.textContent=
+getIcon(path)+" "+name;
+
+dragPreview.classList.add("active");
+
+dragPreview.style.left=
+event.clientX+"px";
+
+dragPreview.style.top=
+event.clientY+"px";
+
+},1000);
+
+}
+
+
+
+function clearLongPress(){
+
+if(longPressTimer){
+
+clearTimeout(longPressTimer);
+
+longPressTimer=null;
+
+}
+
+}
+
+
+
+function findTreeButton(path){
+
+const buttons=
+fileTree.querySelectorAll(".tree-item");
+
+for(const button of buttons){
+
+if(button.dataset.path===path){
+
+return button;
+
+}
+
+}
+
+return null;
+
+}
+
+
+
+function updateDragPreview(x,y){
+
+if(!longPressStarted){
+return;
+}
+
+dragPreview.style.left=x+"px";
+dragPreview.style.top=y+"px";
+
+}
+
+
+
+function getDropFolder(clientX,clientY){
+
+const element=
+document.elementFromPoint(
+clientX,
+clientY
+);
+
+if(!element){
+return null;
+}
+
+const button=
+element.closest(".tree-item");
+
+if(!button||!button.dataset.path){
+return null;
+}
+
+const path=
+normalizePath(button.dataset.path);
+
+if(button.dataset.folder==="true"){
+
+return path;
+
+}
+
+return getDirectory(path);
+
+}
+
+
+
+async function moveEntry(path,targetFolder){
+
+if(!zip){
+return false;
+}
+
+path=normalizePath(path);
+targetFolder=normalizePath(targetFolder);
+
+if(!path||!zip.file(path)){
+return false;
+}
+
+if(
+targetFolder===path||
+targetFolder.startsWith(path+"/")
+){
+return false;
+}
+
+const name=
+path.split("/").pop();
+
+const newPath=
+targetFolder
+?targetFolder+"/"+name
+:name;
+
+const finalPath=
+uniquePath(newPath);
+
+if(finalPath===path){
+return false;
+}
+
+const entry=zip.file(path);
+
+if(!entry){
+return false;
+}
+
+const data=
+await entry.async("uint8array");
+
+zip.file(finalPath,data);
+zip.remove(path);
+
+if(selectedPath===path){
+
+selectedPath=finalPath;
+
+editorPath.textContent=
+finalPath;
+
+}
+
+await refreshAddonDetection();
+
+renderTree();
+
+return true;
+
+}
+
+
+
+async function finishLongPress(event){
+
+clearLongPress();
+
+if(!longPressStarted){
+return;
+}
+
+const source=dragPath;
+
+const targetFolder=
+getDropFolder(
+event.clientX,
+event.clientY
+);
+
+if(
+targetFolder&&
+source!==targetFolder&&
+!targetFolder.startsWith(source+"/")
+){
+
+await moveEntry(
+source,
+targetFolder
+);
+
+}
+
+if(dragSourceButton){
+
+dragSourceButton.style.opacity="";
+
+}
+
+dragPreview.classList.remove("active");
+
+longPressStarted=false;
+dragPath="";
+dragPointerId=null;
+dragSourceButton=null;
+
+}
+
+
+
+function cancelLongPress(){
+
+clearLongPress();
+
+if(dragSourceButton){
+
+dragSourceButton.style.opacity="";
+
+}
+
+dragPreview.classList.remove("active");
+
+longPressStarted=false;
+dragPath="";
+dragPointerId=null;
+dragSourceButton=null;
+
+}
+
+
+
+function attachTreePointerEvents(button,path,isFolder){
+
+button.dataset.path=path;
+button.dataset.folder=isFolder?"true":"false";
+
+button.addEventListener(
+"pointerdown",
+event=>{
+
+activePointers.add(event.pointerId);
+
+if(activePointers.size===1){
+
+startLongPress(event,path);
+
+}
+
+},
+{
+passive:true
+}
+);
+
+
+
+button.addEventListener(
+"pointermove",
+event=>{
+
+if(
+longPressStarted&&
+dragPointerId===event.pointerId
+){
+
+updateDragPreview(
+event.clientX,
+event.clientY
+);
+
+event.preventDefault();
+
+return;
+
+}
+
+if(
+longPressPointerId===event.pointerId&&
+!longPressStarted
+){
+
+if(
+Math.abs(event.movementX)>8||
+Math.abs(event.movementY)>8
+){
+
+clearLongPress();
+
+}
+
+}
+
+},
+{
+passive:false
+}
+);
+
+
+
+button.addEventListener(
+"pointerup",
+async event=>{
+
+activePointers.delete(event.pointerId);
+
+if(
+longPressStarted&&
+dragPointerId===event.pointerId
+){
+
+await finishLongPress(event);
+
+}else{
+
+clearLongPress();
+
+}
+
+},
+{
+passive:false
+}
+);
+
+
+
+button.addEventListener(
+"pointercancel",
+event=>{
+
+activePointers.delete(event.pointerId);
+
+if(
+longPressStarted&&
+dragPointerId===event.pointerId
+){
+
+cancelLongPress();
+
+}else{
+
+clearLongPress();
+
+}
+
+},
+{
+passive:false
+}
+);
+
+
+
+button.addEventListener(
+"contextmenu",
+event=>{
+
+event.preventDefault();
+
+}
+);
+
+}
+
+
+
 function createNewFile(){
 
 if(!zip){
@@ -1772,7 +1877,10 @@ Array.from(newFileInput.files||[]);
 for(const file of files){
 
 let path=
-normalizePath(file.webkitRelativePath||file.name);
+normalizePath(
+file.webkitRelativePath||
+file.name
+);
 
 if(zip.file(path)){
 
@@ -1996,6 +2104,51 @@ null,
 );
 
 renderTree();
+
+refreshAddonDetection().then(()=>{
+
+renderTree();
+
+});
+
+}
+
+
+
+function deleteSelected(){
+
+if(!zip||!selectedPath){
+return;
+}
+
+const target=selectedPath;
+
+const name=
+target.split("/").pop();
+
+if(
+!confirm(
+"「"+name+"」を削除しますか？"
+)
+){
+
+return;
+
+}
+
+zip.remove(target);
+
+selectedPath="";
+selectedType="";
+
+editorTitle.textContent="編集";
+editorPath.textContent="";
+
+editorContent.innerHTML=
+'<div class="editor-empty">ファイル構成から項目をタップしてください</div>';
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
 
 refreshAddonDetection().then(()=>{
 
@@ -2794,8 +2947,6 @@ URL.revokeObjectURL(url);
 
 
 
-/* 操作用ショートカット */
-
 document.addEventListener(
 "keydown",
 event=>{
@@ -2810,6 +2961,19 @@ event.preventDefault();
 if(zip){
 createNewFile();
 }
+
+}
+
+if(
+(event.key==="Delete"||
+event.key==="Backspace")&&
+selectedPath&&
+document.activeElement?.tagName!=="TEXTAREA"
+){
+
+event.preventDefault();
+
+deleteSelected();
 
 }
 
@@ -2909,7 +3073,8 @@ prompt(
 "1: ファイル名変更\n"+
 "2: ファイルアップロード\n"+
 "3: 新規ファイル\n"+
-"4: 新規JSON"
+"4: 新規JSON\n"+
+"5: 削除"
 );
 
 if(action==="1"){
@@ -2933,6 +3098,12 @@ createNewFile();
 if(action==="4"){
 
 createNewJson();
+
+}
+
+if(action==="5"){
+
+deleteSelected();
 
 }
 
