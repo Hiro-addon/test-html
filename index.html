@@ -1008,7 +1008,9 @@ const fullPath=parentPath
 ?parentPath+"/"+folderName
 :folderName;
 
-const open=openFolders.has(fullPath);
+const open=moveModePath
+?true
+:openFolders.has(fullPath);
 
 const button=document.createElement("button");
 
@@ -1089,6 +1091,8 @@ depth+1
 }
 }
 
+if(!moveModePath){
+
 for(const file of files){
 
 const fullPath=parentPath
@@ -1123,6 +1127,9 @@ await openFile(fullPath);
 };
 
 fragment.appendChild(button);
+
+}
+
 }
 
 }
@@ -1357,6 +1364,7 @@ zip.folder(destination);
 const data=await item.entry.async("uint8array");
 
 zip.file(destination,data);
+
 }
 
 }
@@ -1502,6 +1510,7 @@ zip.folder(destination);
 const data=await item.entry.async("uint8array");
 
 zip.file(destination,data);
+
 }
 
 }
@@ -1790,27 +1799,32 @@ async function normalizePackStructure(){
 
 if(!zip)return;
 
-const entries=[];
-
-zip.forEach((path,entry)=>{
-
-if(entry.dir)return;
-
-const normalized=normalizePath(path);
-
-if(normalized){
-entries.push(normalized);
-}
-
-});
-
 const packTypes=["RP","BP"];
 
 for(const packType of packTypes){
 
-const candidates=entries.filter(path=>{
+const entries=[];
 
-const parts=path.split("/");
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path);
+
+if(normalized){
+
+entries.push({
+path:normalized,
+entry:entry
+});
+
+}
+
+});
+
+const candidates=entries.filter(item=>{
+
+const parts=item.path
+.replace(/\/$/,"")
+.split("/");
 
 return parts.some(
 part=>part.toUpperCase()===packType
@@ -1822,9 +1836,11 @@ if(!candidates.length)continue;
 
 let packRoot="";
 
-for(const path of candidates){
+for(const item of candidates){
 
-const parts=path.split("/");
+const parts=item.path
+.replace(/\/$/,"")
+.split("/");
 
 const index=parts.findIndex(
 part=>part.toUpperCase()===packType
@@ -1844,41 +1860,26 @@ candidate.length<packRoot.length
 packRoot=candidate;
 
 }
+
 }
 
 if(!packRoot)continue;
 
-const manifestCandidates=entries.filter(path=>{
-
-const parts=path.split("/");
-
-const packIndex=parts.findIndex(
-part=>part.toUpperCase()===packType
-);
+const packEntries=entries.filter(item=>{
 
 return (
-packIndex>=0&&
-parts[parts.length-1].toLowerCase()==="manifest.json"
+item.path===packRoot||
+item.path.startsWith(packRoot+"/")
 );
 
 });
 
-if(!manifestCandidates.length)continue;
+for(const item of packEntries){
 
-const packEntries=entries.filter(path=>{
+const oldPath=item.path;
+const cleanOldPath=oldPath.replace(/\/$/,"");
 
-return (
-path===packRoot||
-path.startsWith(packRoot+"/")
-);
-
-});
-
-const packIndex=packRoot.split("/").length-1;
-
-for(const oldPath of packEntries){
-
-const parts=oldPath.split("/");
+const parts=cleanOldPath.split("/");
 
 const index=parts.findIndex(
 part=>part.toUpperCase()===packType
@@ -1890,19 +1891,83 @@ const newPath=parts
 .slice(index)
 .join("/");
 
-if(oldPath===newPath)continue;
+if(cleanOldPath===newPath)continue;
 
-const entry=zip.file(oldPath);
+if(item.entry.dir){
 
-if(!entry)continue;
+zip.folder(newPath);
 
-const data=await entry.async("uint8array");
+}else{
+
+const data=await item.entry.async("uint8array");
 
 if(!zip.file(newPath)){
 zip.file(newPath,data);
 }
 
+}
+
 zip.remove(oldPath);
+
+}
+
+}
+
+const wrapperDirs=[];
+
+zip.forEach((path,entry)=>{
+
+if(!entry.dir)return;
+
+const normalized=normalizePath(path).replace(/\/+$/,"");
+
+if(!normalized)return;
+
+const upperParts=normalized.split("/");
+
+if(
+upperParts.some(
+part=>
+part.toUpperCase()==="RP"||
+part.toUpperCase()==="BP"
+)
+){
+
+return;
+
+}
+
+wrapperDirs.push(normalized);
+
+});
+
+wrapperDirs.sort(
+(a,b)=>b.split("/").length-a.split("/").length
+);
+
+for(const dir of wrapperDirs){
+
+let hasChild=false;
+
+zip.forEach((path,entry)=>{
+
+const normalized=normalizePath(path).replace(/\/+$/,"");
+
+if(
+normalized!==dir&&
+normalized.startsWith(dir+"/")
+){
+
+hasChild=true;
+
+}
+
+});
+
+if(!hasChild){
+
+zip.remove(dir+"/");
+
 }
 
 }
@@ -1930,6 +1995,7 @@ normalizePath(path)
 );
 
 }
+
 });
 
 const roots=new Set();
