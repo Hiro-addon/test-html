@@ -711,7 +711,13 @@ return [
 ".jpeg",
 ".webp",
 ".gif",
-".svg"
+".svg",
+".ogg",
+".mp3",
+".wav",
+".m4a",
+".aac",
+".flac"
 ].some(x=>p.endsWith(x));
 }
 
@@ -719,8 +725,12 @@ function isImage(path){
 return /\.(png|jpe?g|webp|gif|svg)$/i.test(path);
 }
 
+function isAudio(path){
+return /\.(ogg|mp3|wav|m4a|aac|flac)$/i.test(path);
+}
+
 function isText(path){
-return !isImage(path);
+return !isImage(path)&&!isAudio(path);
 }
 
 function updateTreeTools(){
@@ -1083,6 +1093,67 @@ updateImageTransform();
 },{
 passive:false
 });
+
+}
+
+function getAudioMime(path){
+
+const ext=normalizePath(path)
+.split(".")
+.pop()
+.toLowerCase();
+
+const map={
+ogg:"audio/ogg",
+mp3:"audio/mpeg",
+wav:"audio/wav",
+m4a:"audio/mp4",
+aac:"audio/aac",
+flac:"audio/flac"
+};
+
+return map[ext]||"application/octet-stream";
+
+}
+
+function showAudio(data,path){
+
+clearImageUrl();
+
+const blob=new Blob(
+[data],
+{
+type:getAudioMime(path)
+}
+);
+
+imageObjectUrl=URL.createObjectURL(blob);
+
+editorContent.innerHTML=`
+<div class="image-area">
+
+<div class="image-toolbar">
+
+<div class="zoom-value">
+🔉 音声プレビュー
+</div>
+
+</div>
+
+<div class="image-canvas" style="display:flex;align-items:center;justify-content:center;padding:20px;">
+
+<audio
+controls
+style="width:100%;max-width:600px;"
+src="${imageObjectUrl}"
+></audio>
+
+</div>
+
+</div>
+`;
+
+saveButton.disabled=true;
 
 }
 
@@ -1497,6 +1568,10 @@ if(isImage(path)){
 return "🖼️";
 }
 
+if(isAudio(path)){
+return "🔉";
+}
+
 return "📄";
 
 }
@@ -1525,7 +1600,20 @@ const entry=zip.file(path);
 if(!entry)return;
 
 selectedPath=path;
-selectedType=isImage(path)?"image":"text";
+
+if(isImage(path)){
+
+selectedType="image";
+
+}else if(isAudio(path)){
+
+selectedType="audio";
+
+}else{
+
+selectedType="text";
+
+}
 
 moveModePath="";
 moveTargetFolder="";
@@ -1542,6 +1630,16 @@ if(isImage(path)){
 const data=await entry.async("uint8array");
 
 showImage(data,path);
+
+return;
+
+}
+
+if(isAudio(path)){
+
+const data=await entry.async("uint8array");
+
+showAudio(data,path);
 
 return;
 
