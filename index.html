@@ -2317,100 +2317,72 @@ zip.remove(dir+"/");
 
 async function refreshAddonDetection(){
 
-if(!zip){
-
+hasRP=false;
+hasBP=false;
 addonDetected=false;
-packRoots=[];
 
-return false;
+const files=Object.values(fileMap);
 
-}
+for(const file of files){
 
-let hasRP=false;
-let hasBP=false;
-
-const manifests=[];
-
-zip.forEach((path,entry)=>{
-
-if(entry.dir)return;
-
-const normalized=normalizePath(path);
-
-if(
-normalized.toLowerCase()==="manifest.json"||
-normalized.toLowerCase().endsWith("/manifest.json")
-){
-
-manifests.push({
-path:normalized,
-entry:entry
-});
-
-}
-
-});
-
-for(const manifest of manifests){
+if(file.type!=="file"||!file.path.endsWith("manifest.json")) continue;
 
 try{
 
-const text=await manifest.entry.async("string");
-
-const data=JSON.parse(text);
+const text=await file.blob.text();
+const manifest=JSON.parse(text);
 
 if(
-!data||
-typeof data!=="object"||
-!data.header||
-typeof data.header!=="object"||
-typeof data.header.uuid!=="string"||
-!Array.isArray(data.header.version)||
-data.header.version.length!==3||
-!Array.isArray(data.modules)||
-data.modules.length===0
+!manifest.header||
+typeof manifest.header.uuid!=="string"||
+!Array.isArray(manifest.header.version)||
+manifest.header.version.length!==3||
+!Array.isArray(manifest.modules)||
+manifest.modules.length===0
 ){
-
 continue;
+}
+
+let isRP=false;
+let isBP=false;
+
+for(const module of manifest.modules){
+
+if(module.type==="resources"){
+isRP=true;
+}
+
+if(
+module.type==="data"||
+module.type==="script"||
+module.type==="client_data"||
+module.type==="interface"||
+module.type==="world_template"
+){
+isBP=true;
+}
 
 }
 
-const validModule=data.modules.some(module=>
-module&&
-typeof module==="object"&&
-typeof module.type==="string"&&
-[
-"resources",
-"data",
-"client_data",
-"interface",
-"world_template",
-"script"
-].includes(module.type)
-);
+const path=file.path.split("/");
 
-if(!validModule)continue;
+if(path.includes("RP")){
+isRP=true;
+}
 
-const parts=manifest.path
-.replace(/\/manifest\.json$/i,"")
-.split("/")
-.map(x=>x.toUpperCase());
+if(path.includes("BP")){
+isBP=true;
+}
 
-if(parts.includes("RP")){
-
+if(isRP){
 hasRP=true;
-
 }
 
-if(parts.includes("BP")){
-
+if(isBP){
 hasBP=true;
-
 }
 
-}catch{
-
-}
+}catch(e){}
 
 }
 
@@ -2418,32 +2390,24 @@ addonDetected=hasRP&&hasBP;
 
 packRoots=[];
 
-zip.forEach((path,entry)=>{
+for(const file of files){
 
-if(entry.dir)return;
-
-const normalized=normalizePath(path);
-
-const parts=normalized.split("/");
+const parts=file.path.split("/");
 
 if(parts.length>1){
 
-const first=parts[0];
+const root=parts[0];
 
 if(
-first.toUpperCase()==="RP"||
-first.toUpperCase()==="BP"
+!packRoots.includes(root)&&
+(root==="RP"||root==="BP")
 ){
-
-packRoots.push(first);
-
+packRoots.push(root);
 }
 
 }
 
-});
-
-packRoots=[...new Set(packRoots)];
+}
 
 return addonDetected;
 
