@@ -541,6 +541,10 @@ type="file"
 アップロード
 </button>
 
+<button id="deselectButton" disabled>
+選択解除
+</button>
+
 </div>
 
 </div>
@@ -627,6 +631,7 @@ const deleteButton=document.getElementById("deleteButton");
 const newFileButton=document.getElementById("newFileButton");
 const newJsonButton=document.getElementById("newJsonButton");
 const uploadButton=document.getElementById("uploadButton");
+const deselectButton=document.getElementById("deselectButton");
 
 let zip=null;
 let selectedPath="";
@@ -666,6 +671,20 @@ const p=normalizePath(path);
 const a=p.split("/");
 a.pop();
 return a.join("/");
+}
+
+function getSelectedDirectory(){
+
+if(!selectedPath)return "";
+
+if(selectedType==="folder"){
+
+return normalizePath(selectedPath);
+
+}
+
+return directoryName(selectedPath);
+
 }
 
 function isAllowedFile(path){
@@ -719,6 +738,7 @@ const selected=!!selectedPath;
 moveButton.disabled=!selected||!!moveModePath;
 renameButton.disabled=!selected||!!moveModePath;
 deleteButton.disabled=!selected||!!moveModePath;
+deselectButton.disabled=!selected||!!moveModePath;
 }
 
 function clearImageUrl(){
@@ -1943,6 +1963,31 @@ renderTree();
 
 }
 
+function deselect(){
+
+if(!zip)return;
+
+selectedPath="";
+selectedType="";
+moveModePath="";
+moveTargetFolder="";
+
+editorTitle.textContent="編集";
+editorPath.textContent="";
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+ファイル構成から項目をタップしてください
+</div>
+`;
+
+saveButton.disabled=true;
+fileDownloadButton.disabled=true;
+
+renderTree();
+
+}
+
 function createNewFile(){
 
 if(!zip)return;
@@ -1951,11 +1996,11 @@ const name=prompt("新規フォルダ名を入力してください");
 
 if(!name)return;
 
-let path=normalizePath(name).replace(/\/+$/,"");
+let folderName=normalizePath(name).replace(/\/+$/,"");
 
-if(!path)return;
+if(!folderName)return;
 
-const parts=path.split("/");
+const parts=folderName.split("/");
 
 if(parts.some(part=>part==="."||part==="..")){
 
@@ -1964,6 +2009,12 @@ alert("フォルダ名が不正です。");
 return;
 
 }
+
+const parent=getSelectedDirectory();
+
+const path=parent
+?parent+"/"+folderName
+:folderName;
 
 let exists=false;
 
@@ -2010,15 +2061,21 @@ const name=prompt("新規JSONファイル名を入力してください");
 
 if(!name)return;
 
-let path=normalizePath(name);
+let fileNameInput=normalizePath(name);
 
-if(!path)return;
+if(!fileNameInput)return;
 
-if(!path.toLowerCase().endsWith(".json")){
+if(!fileNameInput.toLowerCase().endsWith(".json")){
 
-path+=".json";
+fileNameInput+=".json";
 
 }
+
+const parent=getSelectedDirectory();
+
+const path=parent
+?parent+"/"+fileNameInput
+:fileNameInput;
 
 if(zip.file(path)){
 
@@ -2047,13 +2104,17 @@ async function uploadFiles(files){
 
 if(!zip)return;
 
+const parent=getSelectedDirectory();
+
 for(const file of files){
 
-let path=normalizePath(
-file.webkitRelativePath||file.name
-);
+let name=normalizePath(file.name);
 
-if(!path)continue;
+if(!name)continue;
+
+let path=parent
+?parent+"/"+name
+:name;
 
 if(zip.file(path)){
 
@@ -2825,6 +2886,12 @@ createNewJson();
 uploadButton.onclick=()=>{
 
 newFileInput.click();
+
+};
+
+deselectButton.onclick=()=>{
+
+deselect();
 
 };
 
