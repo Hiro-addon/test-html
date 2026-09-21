@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MC Pack Editor Test</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+background:#111;
+color:#fff;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+padding:24px 16px 50px;
+}
+
+h1{
+margin:0 0 8px;
+font-size:28px;
+}
+
+.subtitle{
+color:#888;
+margin-bottom:24px;
+}
+
+.section{
+background:#1a1a1a;
+border:1px solid #292929;
+border-radius:14px;
+padding:18px;
+margin-bottom:16px;
+}
+
+.section h2{
+margin:0 0 16px;
+font-size:18px;
+}
+
+.upload{
+border:1px dashed #444;
+border-radius:12px;
+padding:22px;
+text-align:center;
+background:#111;
+}
+
+.file-input{
+display:none;
+}
+
+.upload-button{
+display:inline-block;
+padding:13px 20px;
+border-radius:10px;
+background:#fff;
+color:#111;
+font-weight:bold;
+cursor:pointer;
+}
+
+.file-name{
+margin-top:12px;
+color:#888;
+font-size:13px;
+word-break:break-all;
+}
+
+.editor-layout{
+display:grid;
+grid-template-columns:300px 1fr;
+gap:16px;
+}
+
+.file-tree,
+.editor-panel{
+background:#0d0d0d;
+border:1px solid #292929;
+border-radius:12px;
+overflow:hidden;
+}
+
+.file-tree-title,
+.editor-panel-title{
+padding:13px 14px;
+border-bottom:1px solid #292929;
+font-weight:bold;
+}
+
+.tree-content{
+padding:8px;
+}
+
+.tree-item{
+display:block;
+width:100%;
+padding:10px;
+margin-bottom:2px;
+border:0;
+border-radius:8px;
+background:transparent;
+color:#fff;
+text-align:left;
+font-size:14px;
+cursor:pointer;
+}
+
+.tree-item:hover{
+background:#1c1c1c;
+}
+
+.folder{
+font-weight:bold;
+}
+
+.indent{
+padding-left:28px;
+}
+
+.editor-path{
+color:#888;
+font-size:12px;
+font-weight:normal;
+margin-left:8px;
+}
+
+.editor-content{
+min-height:400px;
+}
+
+.editor-empty{
+min-height:400px;
+display:flex;
+align-items:center;
+justify-content:center;
+text-align:center;
+padding:30px;
+color:#777;
+}
+
+textarea{
+display:block;
+width:100%;
+height:500px;
+resize:vertical;
+border:0;
+outline:none;
+padding:15px;
+background:#080808;
+color:#ddd;
+font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+font-size:13px;
+line-height:1.6;
+}
+
+.actions{
+display:flex;
+gap:8px;
+padding:10px;
+border-top:1px solid #292929;
+}
+
+button.action{
+padding:9px 14px;
+border:1px solid #444;
+border-radius:8px;
+background:#1a1a1a;
+color:#fff;
+cursor:pointer;
+}
+
+button.action:disabled{
+opacity:.4;
+cursor:not-allowed;
+}
+
+@media(max-width:700px){
+.editor-layout{
+grid-template-columns:1fr;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>MC Pack Editor</h1>
+
+<div class="subtitle">
+MCAddon / MCPack / ZIP
+</div>
+
+<div class="section">
+
+<h2>ファイルを選択</h2>
+
+<div class="upload">
+
+<label class="upload-button" for="fileInput">
+MCAddon / MCPack / ZIPを選択
+</label>
+
+<input
+id="fileInput"
+class="file-input"
+type="file"
+accept=".mcaddon,.mcpack,.zip,application/zip"
+>
+
+<div class="file-name" id="fileName">
+未選択
+</div>
+
+</div>
+
+</div>
+
+<div class="editor-layout">
+
+<div class="file-tree">
+
+<div class="file-tree-title">
+ファイル構成
+</div>
+
+<div class="tree-content" id="fileTree">
+
+<div class="editor-empty">
+ファイルを選択してください
+</div>
+
+</div>
+
+</div>
+
+<div class="editor-panel">
+
+<div class="editor-panel-title">
+
+<span id="editorTitle">
+編集
+</span>
+
+<span class="editor-path" id="editorPath"></span>
+
+</div>
+
+<div class="editor-content" id="editorContent">
+
+<div class="editor-empty">
+ファイル構成から項目をタップしてください
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="action" id="saveButton" disabled>
+保存
+</button>
+
+<button class="action" id="downloadButton" disabled>
+書き出し
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+const fileInput=document.getElementById("fileInput");
+const fileName=document.getElementById("fileName");
+const fileTree=document.getElementById("fileTree");
+const editorTitle=document.getElementById("editorTitle");
+const editorPath=document.getElementById("editorPath");
+const editorContent=document.getElementById("editorContent");
+const saveButton=document.getElementById("saveButton");
+const downloadButton=document.getElementById("downloadButton");
+
+let zip=null;
+let selectedPath="";
+let selectedText=false;
+let outputName="edited.zip";
+
+fileInput.onchange=async()=>{
+
+const file=fileInput.files[0];
+
+if(!file){
+return;
+}
+
+fileName.textContent=file.name;
+outputName=file.name;
+
+try{
+
+zip=await JSZip.loadAsync(file);
+
+renderTree();
+
+downloadButton.disabled=false;
+
+editorTitle.textContent="編集";
+editorPath.textContent="";
+
+editorContent.innerHTML=
+'<div class="editor-empty">ファイル構成から項目をタップしてください</div>';
+
+saveButton.disabled=true;
+
+}catch(error){
+
+zip=null;
+
+fileTree.innerHTML=
+'<div class="editor-empty">読み込みに失敗しました<br><br>'+
+error.message+
+'</div>';
+
+downloadButton.disabled=true;
+
+}
+
+};
+
+function isText(path){
+
+const lower=path.toLowerCase();
+
+return(
+lower.endsWith(".json")||
+lower.endsWith(".js")||
+lower.endsWith(".mcfunction")||
+lower.endsWith(".lang")||
+lower.endsWith(".txt")||
+lower.endsWith(".md")||
+lower.endsWith(".html")||
+lower.endsWith(".css")||
+lower.endsWith(".xml")||
+lower.endsWith(".yml")||
+lower.endsWith(".yaml")
+);
+
+}
+
+function icon(path){
+
+if(isText(path)){
+return "📄";
+}
+
+const lower=path.toLowerCase();
+
+if(
+lower.endsWith(".png")||
+lower.endsWith(".jpg")||
+lower.endsWith(".jpeg")||
+lower.endsWith(".webp")
+){
+return "🖼️";
+}
+
+return "📦";
+}
+
+function renderTree(){
+
+fileTree.innerHTML="";
+
+const paths=[];
+
+zip.forEach((path,entry)=>{
+
+if(entry.dir){
+return;
+}
+
+paths.push(path);
+
+});
+
+paths.sort();
+
+const folders=new Set();
+
+paths.forEach(path=>{
+
+const parts=path.split("/");
+
+for(let i=1;i<parts.length;i++){
+
+folders.add(
+parts.slice(0,i).join("/")
+);
+
+}
+
+});
+
+const all=[
+...Array.from(folders).map(path=>({
+path:path,
+folder:true
+})),
+...paths.map(path=>({
+path:path,
+folder:false
+}))
+];
+
+all.sort((a,b)=>{
+
+const aa=a.path.split("/").length;
+const bb=b.path.split("/").length;
+
+if(aa!==bb){
+return aa-bb;
+}
+
+return a.path.localeCompare(b.path);
+
+});
+
+all.forEach(item=>{
+
+const button=document.createElement("button");
+
+button.className="tree-item";
+
+const depth=
+item.path.split("/").length-1;
+
+if(depth){
+button.classList.add("indent");
+}
+
+const name=
+item.path.split("/").pop();
+
+button.innerHTML=
+(item.folder?"📁":"")+ 
+(!item.folder?icon(item.path):"")+
+" "+name;
+
+button.onclick=()=>{
+
+if(item.folder){
+return;
+}
+
+openFile(item.path);
+
+};
+
+fileTree.appendChild(button);
+
+});
+
+if(!all.length){
+
+fileTree.innerHTML=
+'<div class="editor-empty">ファイルがありません</div>';
+
+}
+
+}
+
+async function openFile(path){
+
+const entry=zip.file(path);
+
+if(!entry){
+return;
+}
+
+selectedPath=path;
+
+editorTitle.textContent=
+path.split("/").pop();
+
+editorPath.textContent=path;
+
+if(isText(path)){
+
+const text=
+await entry.async("string");
+
+selectedText=true;
+
+const textarea=
+document.createElement("textarea");
+
+textarea.id="editorTextarea";
+textarea.value=text;
+
+editorContent.innerHTML="";
+editorContent.appendChild(textarea);
+
+saveButton.disabled=false;
+
+return;
+
+}
+
+selectedText=false;
+
+saveButton.disabled=true;
+
+editorContent.innerHTML=
+'<div class="editor-empty">'+
+"このファイルはテキスト編集に対応していません。"+
+'</div>';
+
+}
+
+saveButton.onclick=()=>{
+
+if(!zip||!selectedPath||!selectedText){
+return;
+}
+
+const textarea=
+document.getElementById("editorTextarea");
+
+if(!textarea){
+return;
+}
+
+zip.file(
+selectedPath,
+textarea.value
+);
+
+saveButton.textContent="保存しました";
+
+setTimeout(()=>{
+saveButton.textContent="保存";
+},1200);
+
+};
+
+downloadButton.onclick=async()=>{
+
+if(!zip){
+return;
+}
+
+downloadButton.disabled=true;
+downloadButton.textContent="生成中...";
+
+try{
+
+const blob=
+await zip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:9
+}
+});
+
+const url=
+URL.createObjectURL(blob);
+
+const a=
+document.createElement("a");
+
+a.href=url;
+a.download=outputName;
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>{
+URL.revokeObjectURL(url);
+},1000);
+
+downloadButton.textContent="書き出し完了";
+
+setTimeout(()=>{
+
+downloadButton.textContent="書き出し";
+downloadButton.disabled=false;
+
+},1200);
+
+}catch(error){
+
+downloadButton.textContent="書き出し";
+downloadButton.disabled=false;
+
+alert(error.message);
+
+}
+
+};
+</script>
+
+</body>
+</html>
