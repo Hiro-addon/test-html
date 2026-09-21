@@ -615,6 +615,27 @@ return [
 ].some(x=>p.endsWith(x));
 }
 
+function shouldKeepFile(path){
+const p=normalizePath(path);
+const lower=p.toLowerCase();
+const name=baseName(p).toLowerCase();
+
+if(
+lower.startsWith("__macosx/")||
+name==="__macosx"||
+name===".ds_store"||
+name==="thumbs.db"||
+lower.endsWith(".bak")||
+lower.endsWith(".tmp")||
+lower.endsWith(".log")||
+lower.endsWith(".db")
+){
+return false;
+}
+
+return isAllowedFile(p);
+}
+
 function isImage(path){
 return /\.(png|jpe?g|webp|gif|svg)$/i.test(path);
 }
@@ -789,64 +810,6 @@ editorContent.innerHTML=`
 `;
 
 saveButton.disabled=true;
-}
-
-function updateSelectedFileButtons(){
-document.querySelectorAll(".file-operations").forEach(x=>x.remove());
-
-if(!selectedPath)return;
-
-const button=document.querySelector(
-`.tree-item[data-path="${CSS.escape(selectedPath)}"]`
-);
-
-if(!button)return;
-
-const box=document.createElement("div");
-box.className="file-operations";
-
-const move=document.createElement("button");
-move.textContent=moveModePath===""+selectedPath?"移動先を選択":"移動";
-
-if(moveModePath===selectedPath){
-move.textContent="移動先を選択";
-}
-
-move.onclick=e=>{
-e.stopPropagation();
-
-if(!zip||!selectedPath)return;
-
-if(moveModePath===selectedPath){
-moveModePath="";
-}else{
-moveModePath=selectedPath;
-}
-
-renderTree();
-};
-
-const rename=document.createElement("button");
-rename.textContent="ファイル名変更";
-
-rename.onclick=e=>{
-e.stopPropagation();
-renameSelected();
-};
-
-const del=document.createElement("button");
-del.textContent="削除";
-
-del.onclick=e=>{
-e.stopPropagation();
-deleteSelected();
-};
-
-box.appendChild(move);
-box.appendChild(rename);
-box.appendChild(del);
-
-button.insertAdjacentElement("afterend",box);
 }
 
 function buildTree(){
@@ -1356,69 +1319,52 @@ names.some(x=>x.endsWith("/manifest.json"));
 return addonDetected;
 }
 
-async function readPack(){
-const file=fileInput.files[0];
+async function createCleanZip(){
+if(!zip)return null;
 
-if(!file)return;
+const cleanZip=new JSZip();
 
-fileName.textContent=file.name;
+const entries=[];
 
-outputName=file.name;
-
-try{
-
-const data=await file.arrayBuffer();
-
-zip=await JSZip.loadAsync(data);
-
-selectedPath="";
-selectedType="";
-moveModePath="";
-
-editorTitle.textContent="編集";
-editorPath.textContent="";
-
-editorContent.innerHTML=`
-<div class="editor-empty">
-ファイル構成から項目をタップしてください
-</div>
-`;
-
-saveButton.disabled=true;
-fileDownloadButton.disabled=true;
-mcpackButton.disabled=false;
-zipButton.disabled=false;
-
-await refreshAddonDetection();
-
-renderTree();
-updateTreeTools();
-
-}catch(error){
-
-zip=null;
-
-fileTree.innerHTML=`
-<div class="editor-empty">
-ファイルを読み込めませんでした
-</div>
-`;
-
-editorContent.innerHTML=`
-<div class="editor-empty">
-読み込みに失敗しました
-</div>
-`;
-
-saveButton.disabled=true;
-fileDownloadButton.disabled=true;
-mcpackButton.disabled=true;
-zipButton.disabled=true;
-
-updateTreeTools();
-
-alert("ファイルの読み込みに失敗しました。");
+zip.forEach((path,entry)=>{
+if(!entry.dir){
+entries.push({
+path:normalizePath(path),
+entry
+});
 }
+});
+
+for(const item of entries){
+if(!shouldKeepFile(item.path))continue;
+
+let data;
+
+if(
+item.path===selectedPath&&
+isText(item.path)
+){
+const textarea=document.getElementById("editorTextarea");
+
+if(textarea){
+data=textarea.value;
+}else{
+data=await item.entry.async("uint8array");
+}
+}else{
+data=await item.entry.async("uint8array");
+}
+
+cleanZip.file(item.path,data);
+}
+
+return await cleanZip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:6
+}
+});
 }
 
 async function downloadBlob(blob,name){
@@ -1481,7 +1427,7 @@ outputName.replace(/\.(mcaddon|mcpack|zip)$/i,"")+".zip"
 async function downloadMcPack(){
 if(!zip)return;
 
-const blob=await makeZip();
+const blob=await createCleanZip();
 
 let name=outputName
 .replace(/\.(mcaddon|mcpack|zip)$/i,"");
