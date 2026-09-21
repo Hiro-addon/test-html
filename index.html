@@ -110,37 +110,7 @@ font-weight:bold;
 .file-tree-title{
 display:flex;
 align-items:center;
-gap:6px;
-flex-wrap:wrap;
-}
-
-.tree-title-text{
-flex-shrink:0;
-}
-
-.tree-title-tools{
-display:flex;
-gap:6px;
-flex-wrap:wrap;
-}
-
-.tree-title-tools button{
-padding:6px 8px;
-border:1px solid #444;
-border-radius:7px;
-background:#1a1a1a;
-color:#fff;
-font-size:11px;
-cursor:pointer;
-}
-
-.tree-title-tools button:hover{
-background:#252525;
-}
-
-.tree-title-tools button:disabled{
-opacity:.4;
-cursor:not-allowed;
+gap:8px;
 }
 
 .tree-content{
@@ -219,14 +189,6 @@ background:#252525;
 background:#252525;
 }
 
-.file-operations{
-display:none;
-}
-
-.file-operations button{
-display:none;
-}
-
 .move-panel{
 display:none;
 padding:10px 8px;
@@ -283,31 +245,29 @@ transform:translateY(0);
 }
 
 .tree-tools{
-display:none;
-gap:8px;
-padding:10px 8px 8px;
-border-top:1px solid #292929;
-animation:filePop .18s ease;
-}
-
-.tree-tools.visible{
-display:grid;
-grid-template-columns:1fr 1fr 1fr;
+display:flex;
+gap:6px;
+align-items:center;
 }
 
 .tree-tools button{
-width:100%;
-padding:9px 5px;
+padding:6px 8px;
 border:1px solid #444;
-border-radius:8px;
+border-radius:7px;
 background:#1a1a1a;
 color:#fff;
-font-size:12px;
+font-size:11px;
 cursor:pointer;
+white-space:nowrap;
 }
 
 .tree-tools button:hover{
 background:#252525;
+}
+
+.tree-tools button:disabled{
+opacity:.4;
+cursor:not-allowed;
 }
 
 .editor-path{
@@ -478,6 +438,18 @@ button.action{
 width:100%;
 }
 
+.file-tree-title{
+flex-wrap:wrap;
+}
+
+.tree-tools{
+width:100%;
+}
+
+.tree-tools button{
+flex:1;
+}
+
 }
 </style>
 </head>
@@ -523,21 +495,19 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 
 <div class="file-tree-title">
 
-<span class="tree-title-text">
-ファイル構成
-</span>
+<span>ファイル構成</span>
 
-<div class="tree-title-tools">
+<div class="tree-tools" id="treeTools">
 
-<button id="treeMoveButton" disabled>
+<button id="moveButton" disabled>
 移動
 </button>
 
-<button id="treeRenameButton" disabled>
+<button id="renameButton" disabled>
 名前変更
 </button>
 
-<button id="treeDeleteButton" disabled>
+<button id="deleteButton" disabled>
 削除
 </button>
 
@@ -562,10 +532,6 @@ accept=".mcaddon,.mcpack,.zip,application/zip"
 <div class="editor-empty">
 ファイルを選択してください
 </div>
-
-</div>
-
-<div class="tree-tools" id="treeTools">
 
 </div>
 
@@ -637,12 +603,12 @@ const fileDownloadButton=document.getElementById("fileDownloadButton");
 const mcpackButton=document.getElementById("mcpackButton");
 const zipButton=document.getElementById("zipButton");
 const treeTools=document.getElementById("treeTools");
+const moveButton=document.getElementById("moveButton");
+const renameButton=document.getElementById("renameButton");
+const deleteButton=document.getElementById("deleteButton");
 const newFileButton=document.getElementById("newFileButton");
 const newJsonButton=document.getElementById("newJsonButton");
 const uploadButton=document.getElementById("uploadButton");
-const treeMoveButton=document.getElementById("treeMoveButton");
-const treeRenameButton=document.getElementById("treeRenameButton");
-const treeDeleteButton=document.getElementById("treeDeleteButton");
 
 let zip=null;
 let selectedPath="";
@@ -719,17 +685,17 @@ return !isImage(path);
 function updateTreeTools(){
 const visible=!!zip;
 
-treeTools.classList.toggle("visible",visible);
+treeTools.style.display=visible?"flex":"none";
 
 newFileButton.disabled=!visible;
 newJsonButton.disabled=!visible;
 uploadButton.disabled=!visible;
 
-const selected=!!zip&&!!selectedPath&&!moveModePath;
+const selected=!!selectedPath;
 
-treeMoveButton.disabled=!selected;
-treeRenameButton.disabled=!selected;
-treeDeleteButton.disabled=!selected;
+moveButton.disabled=!selected||!!moveModePath;
+renameButton.disabled=!selected||!!moveModePath;
+deleteButton.disabled=!selected||!!moveModePath;
 }
 
 function clearImageUrl(){
@@ -1069,11 +1035,25 @@ return;
 selectedPath=fullPath;
 selectedType="folder";
 
+moveTargetFolder="";
+
 editorTitle.textContent=folderName;
 editorPath.textContent=fullPath;
 
-saveButton.disabled=true;
 fileDownloadButton.disabled=true;
+saveButton.disabled=true;
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+フォルダを選択しています
+</div>
+`;
+
+if(open){
+openFolders.delete(fullPath);
+}else{
+openFolders.add(fullPath);
+}
 
 renderTree();
 };
@@ -1125,7 +1105,6 @@ await openFile(fullPath);
 };
 
 fragment.appendChild(button);
-
 }
 
 }
@@ -1254,22 +1233,6 @@ if(!zip||!moveModePath)return;
 const source=normalizePath(moveModePath);
 const target=normalizePath(targetFolder);
 
-if(
-target===source||
-target.startsWith(source+"/")
-){
-
-alert("同じフォルダ内、またはその中には移動できません。");
-
-return;
-}
-
-const sourceIsFolder=
-zip.file(source)===null &&
-[...Object.keys(zip.files)].some(path=>
-normalizePath(path).replace(/\/$/,"")===source
-);
-
 const name=baseName(source);
 
 const newPath=target
@@ -1286,15 +1249,39 @@ renderTree();
 return;
 }
 
-if(zip.file(newPath)){
+if(
+source===target||
+target.startsWith(source+"/")
+){
 
-alert("同名のファイルが存在します。");
+alert("自分自身またはその中には移動できません。");
 
 return;
 }
 
-if(sourceIsFolder){
+if(
+zip.file(newPath)||
+zip.folder(newPath)
+){
 
+alert("同名の項目が存在します。");
+
+return;
+}
+
+const sourceEntry=zip.file(source);
+
+if(sourceEntry){
+
+const data=await sourceEntry.async("uint8array");
+
+zip.remove(source);
+
+zip.file(newPath,data);
+
+}else{
+
+let found=false;
 const entries=[];
 
 zip.forEach((path,entry)=>{
@@ -1308,14 +1295,15 @@ normalized.startsWith(source+"/")
 
 entries.push({
 path:normalized,
-dir:entry.dir
+entry:entry
 });
 
+found=true;
 }
 
 });
 
-if(!entries.length){
+if(!found){
 
 moveModePath="";
 moveTargetFolder="";
@@ -1325,35 +1313,23 @@ renderTree();
 return;
 }
 
-const prefix=source+"/";
-const newPrefix=newPath+"/";
-
 for(const item of entries){
 
-const relative=
-item.path===source
+const relative=item.path===source
 ?""
-:item.path.slice(prefix.length);
+:item.path.slice(source.length+1);
 
-const destination=
-relative
-?newPrefix+relative
-:newPath;
+const destination=newPath+(relative?"/"+relative:"");
 
-if(item.dir){
+if(item.entry.dir){
 
 zip.folder(destination);
 
 }else{
 
-const entry=zip.file(item.path);
-
-if(!entry)continue;
-
-const data=await entry.async("uint8array");
+const data=await item.entry.async("uint8array");
 
 zip.file(destination,data);
-
 }
 
 }
@@ -1364,40 +1340,34 @@ zip.remove(item.path);
 
 }
 
-selectedPath=newPath;
-selectedType="folder";
-
-}else{
-
-const entry=zip.file(source);
-
-if(!entry){
-
-moveModePath="";
-moveTargetFolder="";
-
-renderTree();
-
-return;
 }
 
-const data=await entry.async("uint8array");
-
-zip.remove(source);
-
-zip.file(newPath,data);
-
 selectedPath=newPath;
-selectedType="file";
-
-}
-
 moveModePath="";
 moveTargetFolder="";
 
 await refreshAddonDetection();
 
 renderTree();
+
+if(zip.file(newPath)){
+await openFile(newPath);
+}else{
+
+selectedType="folder";
+editorTitle.textContent=baseName(newPath);
+editorPath.textContent=newPath;
+fileDownloadButton.disabled=true;
+saveButton.disabled=true;
+
+editorContent.innerHTML=`
+<div class="editor-empty">
+フォルダを選択しています
+</div>
+`;
+
+renderTree();
+}
 }
 
 async function renameSelected(){
@@ -1435,13 +1405,27 @@ const newPath=directory
 
 if(newPath===oldPath)return;
 
-const isFolder=
-!zip.file(oldPath)&&
-[...Object.keys(zip.files)].some(path=>
-normalizePath(path).replace(/\/$/,"")===oldPath
-);
+if(
+zip.file(newPath)||
+zip.folder(newPath)
+){
 
-if(isFolder){
+alert("同名の項目が存在します。");
+
+return;
+}
+
+const fileEntry=zip.file(oldPath);
+
+if(fileEntry){
+
+const data=await fileEntry.async("uint8array");
+
+zip.remove(oldPath);
+
+zip.file(newPath,data);
+
+}else{
 
 const entries=[];
 
@@ -1456,7 +1440,7 @@ normalized.startsWith(oldPath+"/")
 
 entries.push({
 path:normalized,
-dir:entry.dir
+entry:entry
 });
 
 }
@@ -1465,35 +1449,23 @@ dir:entry.dir
 
 if(!entries.length)return;
 
-const prefix=oldPath+"/";
-const newPrefix=newPath+"/";
-
 for(const item of entries){
 
-const relative=
-item.path===oldPath
+const relative=item.path===oldPath
 ?""
-:item.path.slice(prefix.length);
+:item.path.slice(oldPath.length+1);
 
-const destination=
-relative
-?newPrefix+relative
-:newPath;
+const destination=newPath+(relative?"/"+relative:"");
 
-if(item.dir){
+if(item.entry.dir){
 
 zip.folder(destination);
 
 }else{
 
-const entry=zip.file(item.path);
-
-if(!entry)continue;
-
-const data=await entry.async("uint8array");
+const data=await item.entry.async("uint8array");
 
 zip.file(destination,data);
-
 }
 
 }
@@ -1504,40 +1476,32 @@ zip.remove(item.path);
 
 }
 
+}
+
 selectedPath=newPath;
-selectedType="folder";
 
 await refreshAddonDetection();
 
 renderTree();
-
-return;
-}
 
 if(zip.file(newPath)){
+await openFile(newPath);
+}else{
 
-alert("同名のファイルが存在します。");
+selectedType="folder";
+editorTitle.textContent=baseName(newPath);
+editorPath.textContent=newPath;
+fileDownloadButton.disabled=true;
+saveButton.disabled=true;
 
-return;
-}
-
-const entry=zip.file(oldPath);
-
-if(!entry)return;
-
-const data=await entry.async("uint8array");
-
-zip.remove(oldPath);
-
-zip.file(newPath,data);
-
-selectedPath=newPath;
-
-await refreshAddonDetection();
+editorContent.innerHTML=`
+<div class="editor-empty">
+フォルダを選択しています
+</div>
+`;
 
 renderTree();
-
-await openFile(newPath);
+}
 }
 
 async function deleteSelected(){
@@ -1546,19 +1510,19 @@ if(!zip||!selectedPath)return;
 
 const path=selectedPath;
 
-const isFolder=
-!zip.file(path)&&
-[...Object.keys(zip.files)].some(item=>
-normalizePath(item).replace(/\/$/,"")===path
-);
-
 if(!confirm(
 `「${baseName(path)}」を削除しますか？`
 )){
 return;
 }
 
-if(isFolder){
+const fileEntry=zip.file(path);
+
+if(fileEntry){
+
+zip.remove(path);
+
+}else{
 
 const removeList=[];
 
@@ -1577,13 +1541,11 @@ removeList.push(normalized);
 
 });
 
-for(const item of removeList){
-zip.remove(item);
+for(const entryPath of removeList){
+
+zip.remove(entryPath);
+
 }
-
-}else{
-
-zip.remove(path);
 
 }
 
@@ -2040,7 +2002,7 @@ URL.revokeObjectURL(url);
 
 async function downloadSelectedFile(){
 
-if(!zip||!selectedPath||selectedType==="folder")return;
+if(!zip||!selectedPath)return;
 
 const entry=zip.file(selectedPath);
 
@@ -2112,6 +2074,23 @@ fileInput.addEventListener(
 readPack
 );
 
+moveButton.onclick=()=>{
+if(!selectedPath)return;
+
+moveModePath=selectedPath;
+moveTargetFolder=directoryName(selectedPath);
+
+renderTree();
+};
+
+renameButton.onclick=()=>{
+renameSelected();
+};
+
+deleteButton.onclick=()=>{
+deleteSelected();
+};
+
 newFileButton.onclick=()=>{
 createNewFile();
 };
@@ -2122,23 +2101,6 @@ createNewJson();
 
 uploadButton.onclick=()=>{
 newFileInput.click();
-};
-
-treeMoveButton.onclick=()=>{
-if(!selectedPath)return;
-
-moveModePath=selectedPath;
-moveTargetFolder=directoryName(selectedPath);
-
-renderTree();
-};
-
-treeRenameButton.onclick=()=>{
-renameSelected();
-};
-
-treeDeleteButton.onclick=()=>{
-deleteSelected();
 };
 
 newFileInput.addEventListener(
