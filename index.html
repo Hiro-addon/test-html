@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Hiro Addon Tools</title>
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="favicon-96.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hiro Addon Tools">
+<meta name="theme-color" content="#111111">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+*{box-sizing:border-box;}
+body{margin:0;background:#111;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.app-header{width:100%;height:78px;background:#fff;position:relative;}
+.app-header-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#111;font-size:21px;font-weight:700;white-space:nowrap;}
+.app-menu-wrap{position:absolute;left:0;top:8px;z-index:10;}
+.app-menu-button{width:58px;height:62px;border:0;background:#fff;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.app-menu-icon{font-size:31px;line-height:29px;font-weight:500;}
+.app-menu-label{font-size:12px;line-height:16px;}
+.container{max-width:900px;margin:auto;padding:24px 16px 50px;}
+.page{display:none;}
+.page.active{display:block;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.back{width:42px;height:42px;border:1px solid #292929;border-radius:10px;background:#1a1a1a;color:#fff;font-size:22px;cursor:pointer;}
+.menu-wrap{position:relative;}
+.menu{position:absolute;left:0;top:70px;width:220px;background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:6px;z-index:100;box-shadow:0 10px 30px #0008;display:none;}
+.menu.active{display:block;}
+.menu button{width:100%;padding:12px;border:0;border-radius:8px;background:transparent;color:#fff;text-align:left;font-size:14px;cursor:pointer;}
+.menu button:hover{background:#292929;}
+h1{margin:0;font-size:28px;}
+.subtitle{margin:6px 0 28px;color:#888;}
+.home-title{margin-bottom:8px;}
+.home-subtitle{margin-bottom:28px;}
+.section{background:#1a1a1a;border:1px solid #292929;border-radius:14px;padding:18px;margin-bottom:16px;}
+.section h2{margin:0 0 16px;font-size:18px;}
+.tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.tool-card{padding:20px;border:1px solid #333;border-radius:12px;background:#111;color:#fff;text-align:left;cursor:pointer;}
+.tool-card:hover{background:#1c1c1c;}
+.tool-icon{font-size:28px;margin-bottom:12px;}
+.tool-name{font-size:17px;font-weight:bold;}
+.tool-description{margin-top:6px;color:#888;font-size:13px;line-height:1.5;}
+label{display:block;margin-bottom:7px;color:#bbb;font-size:14px;}
+input{width:100%;padding:12px 14px;border-radius:9px;border:1px solid #333;background:#111;color:#fff;outline:none;font-size:15px;}
+input:focus{border-color:#666;}
+input::placeholder{color:#777;opacity:.55;}
+.field{margin-bottom:15px;}
+.field:last-child{margin-bottom:0;}
+.choice{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.choice button,.script-choice button{padding:13px 10px;border:1px solid #333;border-radius:10px;background:#111;color:#aaa;cursor:pointer;font-size:14px;}
+.choice button.active,.script-choice button.active{background:#fff;color:#111;border-color:#fff;}
+.script-choice{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+.generate{width:100%;padding:14px;border:0;border-radius:10px;background:#fff;color:#111;font-size:16px;font-weight:bold;cursor:pointer;}
+.generate:disabled{opacity:.4;cursor:not-allowed;}
+.result{margin-top:16px;}
+.result-box{background:#0d0d0d;border:1px solid #292929;border-radius:12px;overflow:hidden;margin-bottom:16px;}
+.result-title{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #292929;font-weight:bold;}
+.copy-btn{padding:7px 12px;border:1px solid #444;border-radius:7px;background:#1a1a1a;color:#fff;cursor:pointer;font-size:12px;}
+.copy-btn:hover{background:#252525;}
+pre{margin:0;padding:15px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:#ddd;font-size:13px;line-height:1.6;}
+.hidden{display:none;}
+.upload{border:1px dashed #444;border-radius:12px;padding:20px;text-align:center;background:#111;}
+.upload input{display:none;}
+.upload-button{display:inline-block;padding:12px 18px;border-radius:9px;background:#fff;color:#111;font-weight:bold;cursor:pointer;}
+.delete-button{display:inline-block;margin-left:8px;padding:12px 18px;border-radius:9px;background:#292929;color:#fff;font-weight:bold;cursor:pointer;border:0;}
+.file-name{margin-top:12px;color:#888;font-size:13px;word-break:break-all;}
+.status{margin-top:16px;background:#0d0d0d;border:1px solid #292929;border-radius:12px;padding:15px;font-size:14px;line-height:1.7;}
+.success{color:#fff;}
+.error{color:#ff7777;}
+.page-loader{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;visibility:hidden;transition:opacity .12s ease;}
+.page-loader.active{opacity:1;visibility:visible;}
+.loader-spinner{width:42px;height:42px;border:4px solid #292929;border-top-color:#fff;border-radius:50%;animation:loader-spin .65s linear infinite;}
+@keyframes loader-spin{to{transform:rotate(360deg);}}
+
+.mc-editor{margin-top:0;}
+.mc-editor *{box-sizing:border-box;}
+.mc-editor .editor-layout{display:grid;grid-template-columns:320px 1fr;gap:16px;}
+.mc-editor .file-tree,.mc-editor .editor-panel{background:#0d0d0d;border:1px solid #292929;border-radius:12px;overflow:hidden;}
+.mc-editor .file-tree-title,.mc-editor .editor-panel-title{padding:13px 14px;border-bottom:1px solid #292929;font-weight:bold;}
+.mc-editor .file-tree-title{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;}
+.mc-editor .file-tree-title>span{flex-shrink:0;}
+.mc-editor .tree-content{padding:8px;}
+.mc-editor .tree-item{display:block;width:100%;padding:10px;margin:2px 0;border:0;border-radius:8px;background:transparent;color:#fff;text-align:left;font-size:14px;cursor:pointer;}
+.mc-editor .tree-item:hover{background:#1c1c1c;}
+.mc-editor .folder{font-weight:700;}
+.mc-editor .file{font-weight:400;}
+.mc-editor .tree-arrow{display:inline-block;width:18px;font-size:12px;color:#aaa;}
+.mc-editor .tree-indent-1{padding-left:30px;}
+.mc-editor .tree-indent-2{padding-left:54px;}
+.mc-editor .tree-indent-3{padding-left:78px;}
+.mc-editor .tree-indent-4{padding-left:102px;}
+.mc-editor .tree-indent-5{padding-left:126px;}
+.mc-editor .tree-hidden{display:none;}
+.mc-editor .file-tree,.mc-editor .tree-item{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+.mc-editor .selected-file,.mc-editor .selected-folder{background:#252525;}
+.mc-editor .move-panel{display:none;padding:10px 8px;border-top:1px solid #292929;animation:mcFilePop .18s ease;}
+.mc-editor .move-panel.visible{display:block;}
+.mc-editor .move-panel-text{font-size:12px;color:#aaa;margin-bottom:8px;word-break:break-all;}
+.mc-editor .move-panel-buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.mc-editor .move-panel-buttons button{padding:8px 5px;border:1px solid #444;border-radius:8px;background:#1a1a1a;color:#fff;font-size:12px;cursor:pointer;}
+.mc-editor .move-panel-buttons button:hover{background:#252525;}
+.mc-editor .move-panel-buttons .move-confirm{background:#fff;color:#111;border-color:#fff;}
+@keyframes mcFilePop{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+.mc-editor .tree-tools{display:flex;gap:6px;align-items:center;min-width:0;overflow-x:auto;overflow-y:hidden;flex:1;padding-bottom:1px;scrollbar-width:none;}
+.mc-editor .tree-tools::-webkit-scrollbar{display:none;}
+.mc-editor .tree-tools button{flex:0 0 auto;padding:6px 8px;border:1px solid #444;border-radius:7px;background:#1a1a1a;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;}
+.mc-editor .tree-tools button:hover{background:#252525;}
+.mc-editor .tree-tools button:disabled{opacity:.4;cursor:not-allowed;}
+.mc-editor .editor-path{display:block;margin-top:4px;color:#777;font-size:11px;font-weight:normal;word-break:break-all;}
+.mc-editor .editor-content{min-height:420px;}
+.mc-editor .editor-empty{min-height:420px;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#777;}
+.mc-editor textarea{display:block;width:100%;height:520px;resize:vertical;border:0;outline:none;padding:15px;background:#080808;color:#ddd;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;}
+.mc-editor .image-area{height:520px;background:#080808;display:flex;flex-direction:column;overflow:hidden;}
+.mc-editor .image-toolbar{height:54px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-bottom:1px solid #292929;background:#101010;z-index:5;}
+.mc-editor .image-toolbar button{min-width:44px;height:38px;padding:0 12px;border:1px solid #444;border-radius:8px;background:#1a1a1a;color:#fff;font-size:18px;cursor:pointer;}
+.mc-editor .image-toolbar button:hover{background:#252525;}
+.mc-editor .zoom-value{min-width:65px;text-align:center;color:#aaa;font-size:12px;}
+.mc-editor .image-canvas{position:relative;flex:1;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:linear-gradient(45deg,#171717 25%,transparent 25%),linear-gradient(-45deg,#171717 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#171717 75%),linear-gradient(-45deg,transparent 75%,#171717 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0;}
+.mc-editor .image-transform{position:absolute;left:50%;top:50%;width:0;height:0;}
+.mc-editor .image-transform img{position:absolute;left:0;top:0;display:block;width:auto;height:auto;max-width:none;max-height:none;transform:translate(-50%,-50%);transform-origin:center center;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+.mc-editor .actions{display:flex;gap:8px;padding:10px;border-top:1px solid #292929;flex-wrap:wrap;}
+.mc-editor button.action{padding:9px 14px;border:1px solid #444;border-radius:8px;background:#1a1a1a;color:#fff;cursor:pointer;}
+.mc-editor button.action:disabled{opacity:.4;cursor:not-allowed;}
+.mc-editor button.action.primary{background:#fff;color:#111;border-color:#fff;}
+.mc-editor .file-operation-input{display:none;}
+
+@media(max-width:650px){
+.tool-grid{grid-template-columns:1fr;}
+.choice{grid-template-columns:1fr;}
+.script-choice{grid-template-columns:1fr;}
+h1{font-size:24px;}
+.app-header-title{font-size:19px;}
+}
+@media(max-width:700px){
+.mc-editor .editor-layout{grid-template-columns:1fr;}
+.mc-editor .actions{display:grid;grid-template-columns:1fr;}
+.mc-editor button.action{width:100%;}
+.mc-editor .file-tree-title{align-items:center;}
+.mc-editor .tree-tools{flex:1;min-width:0;}
+.mc-editor .tree-tools button{flex:0 0 auto;}
+}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+<div class="app-menu-wrap menu-wrap">
+<button class="app-menu-button" id="menuButton">
+<span class="app-menu-icon">☰</span>
+<span class="app-menu-label">メニュー</span>
+</button>
+<div class="menu" id="menu">
+<button onclick="openPage('home')">ホーム</button>
+<button onclick="openPage('manifest')">Manifest Generator</button>
+<button onclick="openPage('pack')">MC Pack Builder</button>
+<button onclick="openPage('editor')">MC Pack Editor</button>
+</div>
+</div>
+<div class="app-header-title">Hiro Addon Tools</div>
+</div>
+
+<div class="page-loader" id="pageLoader">
+<div class="loader-spinner"></div>
+</div>
+
+<div class="container">
+
+<div class="page active" id="home">
+<div style="margin-top:20px;">
+<h1 class="home-title">Hiro Addon Tools</h1>
+<div class="subtitle home-subtitle">Minecraft Bedrock Addon Tools</div>
+</div>
+<div class="section">
+<h2>機能一覧</h2>
+<div class="tool-grid">
+<button class="tool-card" onclick="openPage('manifest')">
+<div class="tool-icon">📄</div>
+<div class="tool-name">Manifest Generator</div>
+<div class="tool-description">Minecraft Bedrockのmanifest.jsonを簡単に生成</div>
+</button>
+<button class="tool-card" onclick="openPage('pack')">
+<div class="tool-icon">📦</div>
+<div class="tool-name">MC Pack Builder</div>
+<div class="tool-description">ZIPからmcpack / mcaddonを自動生成</div>
+</button>
+<button class="tool-card" onclick="openPage('editor')">
+<div class="tool-icon">🛠️</div>
+<div class="tool-name">MC Pack Editor</div>
+<div class="tool-description">mcaddon / mcpack / zipを編集</div>
+</button>
+</div>
+</div>
+</div>
+
+<div class="page" id="manifest">
+<div class="header"><div class="header-left"><button class="back" onclick="openPage('home')">←</button><h1>Manifest Generator</h1></div></div>
+<div class="subtitle">Minecraft Bedrock Addon Manifest Generator</div>
+<div class="section"><h2>パックタイプ</h2><div class="choice">
+<button id="bpBtn" class="active">ビヘイビアパック</button>
+<button id="rpBtn">リソースパック</button>
+<button id="bothBtn">BP ＋ RP</button>
+</div></div>
+<div class="section"><h2>基本設定</h2>
+<div class="field"><label>アドオン名</label><input id="name" type="text" placeholder="アドオン名"></div>
+<div class="field"><label>説明文</label><input id="description" type="text" placeholder="アドオン説明文"></div>
+<div class="field"><label>アドオンのバージョン</label><input id="version" type="text" placeholder="1.0.0"></div>
+<div class="field"><label>最低Minecraftバージョン</label><input id="engine" type="text" placeholder="1.20.0"></div>
+</div>
+<div class="section" id="scriptSection"><h2>スクリプト</h2>
+<div class="script-choice">
+<button id="scriptOffBtn" class="active">使用しない</button>
+<button id="scriptOnBtn">使用する</button>
+</div>
+<div id="scriptSettings" class="hidden">
+<div class="field"><label>エントリーファイル</label><input id="entry" type="text" placeholder="main.js"></div>
+<div class="field"><label>@microsoft/server バージョン</label><input id="serverVersion" type="text" placeholder="2.7.0"></div>
+<div class="field"><label>@microsoft/server-ui</label><div style="display:flex;align-items:center;gap:10px;"><input id="uiCheck" type="checkbox" style="width:18px;height:18px;"><span style="color:#aaa;font-size:14px;">使用する</span></div></div>
+<div class="field hidden" id="uiVersionField"><label>@microsoft/server-ui バージョン</label><input id="uiVersion" type="text" placeholder="1.1.0"></div>
+</div></div>
+<div class="section"><button class="generate" id="generateManifest">Manifestを生成</button></div>
+<div class="result" id="result"></div>
+</div>
+
+<div class="page" id="pack">
+<div class="header"><div class="header-left"><button class="back" onclick="openPage('home')">←</button><h1>MC Pack Builder</h1></div></div>
+<div class="subtitle">Minecraft Bedrock Pack Generator</div>
+<div class="section"><h2>ビヘイビアパック</h2><div class="upload">
+<label class="upload-button" for="bpFile">BP ZIPを選択</label><button class="delete-button" id="bpDelete">削除</button>
+<input id="bpFile" type="file" accept=".zip,application/zip"><div class="file-name" id="bpName">未選択</div>
+</div></div>
+<div class="section"><h2>リソースパック</h2><div class="upload">
+<label class="upload-button" for="rpFile">RP ZIPを選択</label><button class="delete-button" id="rpDelete">削除</button>
+<input id="rpFile" type="file" accept=".zip,application/zip"><div class="file-name" id="rpName">未選択</div>
+</div></div>
+<div class="section"><button class="generate" id="generatePack">パックを生成</button></div>
+<div class="status" id="status">RPまたはBPのZIPを選択してください。</div>
+</div>
+
+<div class="page" id="editor">
+<div class="header"><div class="header-left"><button class="back" onclick="openPage('home')">←</button><h1>MC Pack Editor</h1></div></div>
+<div class="subtitle">Minecraft Addon Editor</div>
+
+<div class="section mc-editor">
+<h2>ファイルを選択</h2>
+<div class="upload">
+<label class="upload-button" for="mcEditorFileInput">mcaddon / mcpack / zipを選択</label>
+<input id="mcEditorFileInput" class="file-input" type="file">
+<input id="mcEditorNewFileInput" class="file-operation-input" type="file" multiple>
+<div class="file-name" id="mcEditorFileName">未選択</div>
+</div>
+</div>
+
+<div class="mc-editor">
+<div class="editor-layout">
+<div class="file-tree">
+<div class="file-tree-title">
+<span>ファイル構成</span>
+<div class="tree-tools" id="mcEditorTreeTools">
+<button id="mcEditorMoveButton" disabled>移動</button>
+<button id="mcEditorRenameButton" disabled>名前変更</button>
+<button id="mcEditorDeleteButton" disabled>削除</button>
+<button id="mcEditorNewFileButton" disabled>新規ファイル</button>
+<button id="mcEditorNewJsonButton" disabled>新規JSON</button>
+<button id="mcEditorUploadButton" disabled>アップロード</button>
+<button id="mcEditorDeselectButton" disabled>選択解除</button>
+</div>
+</div>
+<div class="tree-content" id="mcEditorFileTree"><div class="editor-empty">ファイルを選択してください</div></div>
+</div>
+<div class="editor-panel">
+<div class="editor-panel-title"><div id="mcEditorTitle">編集</div><div class="editor-path" id="mcEditorPath"></div></div>
+<div class="editor-content" id="mcEditorContent"><div class="editor-empty">ファイル構成から項目をタップしてください</div></div>
+<div class="actions">
+<button class="action" id="mcEditorSaveButton" disabled>保存</button>
+<button class="action" id="mcEditorFileDownloadButton" disabled>このファイルを書き出し</button>
+<button class="action primary" id="mcEditorMcpackButton" disabled>mcaddon / mcpackとして書き出し</button>
+<button class="action" id="mcEditorZipButton" disabled>zipとして書き出し</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const menuButton=document.getElementById("menuButton");
+const menu=document.getElementById("menu");
+const pageLoader=document.getElementById("pageLoader");
+
+menuButton.onclick=()=>{menu.classList.toggle("active");};
+
+let pageLoading=false;
+
+function resetPageData(page){
+if(page==="manifest"){
+document.getElementById("name").value="";
+document.getElementById("description").value="";
+document.getElementById("version").value="";
+document.getElementById("engine").value="";
+document.getElementById("entry").value="";
+document.getElementById("serverVersion").value="";
+document.getElementById("uiVersion").value="";
+document.getElementById("uiCheck").checked=false;
+document.getElementById("result").innerHTML="";
+packType="bp";
+useScript=false;
+bpBtn.classList.add("active");
+rpBtn.classList.remove("active");
+bothBtn.classList.remove("active");
+scriptOffBtn.classList.add("active");
+scriptOnBtn.classList.remove("active");
+scriptSettings.classList.add("hidden");
+scriptSection.classList.remove("hidden");
+uiVersionField.classList.add("hidden");
+}
+if(page==="pack"){
+rpFile.value="";
+bpFile.value="";
+rpName.textContent="未選択";
+bpName.textContent="未選択";
+status.className="status";
+status.innerHTML="RPまたはBPのZIPを選択してください。";
+updateButton();
+}
+if(page==="editor"){
+mcEditorFileInput.value="";
+mcEditorSelectedPath="";
+mcEditorSelectedType="";
+mcEditorZip=null;
+mcEditorRenderTree();
+mcEditorContent.innerHTML='<div class="editor-empty">ファイル構成から項目をタップしてください</div>';
+mcEditorSaveButton.disabled=true;
+}
+}
+
+function openPage(page){
+if(pageLoading)return;
+const current=document.querySelector(".page.active");
+if(current&&current.id===page){menu.classList.remove("active");return;}
+if(current)resetPageData(current.id);
+pageLoading=true;
+menu.classList.remove("active");
+pageLoader.classList.add("active");
+setTimeout(()=>{
+document.querySelectorAll(".page").forEach(p=>{p.classList.remove("active");});
+document.getElementById(page).classList.add("active");
+window.scrollTo({top:0,behavior:"instant"});
+setTimeout(()=>{
+pageLoader.classList.remove("active");
+setTimeout(()=>{pageLoading=false;},120);
+},300);
+},120);
+}
+
+document.addEventListener("click",e=>{
+if(!e.target.closest(".menu-wrap"))menu.classList.remove("active");
+});
+
+let packType="bp";
+let useScript=false;
+const bpBtn=document.getElementById("bpBtn");
+const rpBtn=document.getElementById("rpBtn");
+const bothBtn=document.getElementById("bothBtn");
+const scriptSection=document.getElementById("scriptSection");
+const scriptOffBtn=document.getElementById("scriptOffBtn");
+const scriptOnBtn=document.getElementById("scriptOnBtn");
+const scriptSettings=document.getElementById("scriptSettings");
+const uiCheck=document.getElementById("uiCheck");
+const uiVersionField=document.getElementById("uiVersionField");
+
+function setPackType(type){
+packType=type;
+bpBtn.classList.toggle("active",type==="bp");
+rpBtn.classList.toggle("active",type==="rp");
+bothBtn.classList.toggle("active",type==="both");
+if(type==="rp"){
+scriptSection.classList.add("hidden");
+useScript=false;
+scriptOffBtn.classList.add("active");
+scriptOnBtn.classList.remove("active");
+scriptSettings.classList.add("hidden");
+}else{scriptSection.classList.remove("hidden");}
+}
+bpBtn.onclick=()=>{setPackType("bp");};
+rpBtn.onclick=()=>{setPackType("rp");};
+bothBtn.onclick=()=>{setPackType("both");};
+scriptOffBtn.onclick=()=>{useScript=false;scriptOffBtn.classList.add("active");scriptOnBtn.classList.remove("active");scriptSettings.classList.add("hidden");};
+scriptOnBtn.onclick=()=>{useScript=true;scriptOffBtn.classList.remove("active");scriptOnBtn.classList.add("active");scriptSettings.classList.remove("hidden");};
+uiCheck.onchange=()=>{uiVersionField.classList.toggle("hidden",!uiCheck.checked);};
+
+function getValue(id,defaultValue){
+const value=document.getElementById(id).value.trim();
+return value||defaultValue;
+}
+function getVersion(id,defaultValue){
+const input=document.getElementById(id);
+const value=input.value.trim();
+if(!value){return defaultValue;}
+if(!/^[0-9]+(\.[0-9]+)*$/.test(value)){input.value="";return defaultValue;}
+return value;
+}
+function getScriptVersion(id,defaultValue){
+const input=document.getElementById(id);
+const value=input.value.trim();
+if(!value)return defaultValue;
+if(value==="beta")return value;
+if(!/^[0-9]+(\.[0-9]+)*(?:-(?:beta|rc)(?:\.[0-9A-Za-z]+)*)?$/.test(value)){input.value="";return defaultValue;}
+return value;
+}
+function versionArray(value){return value.split(".").map(v=>{const n=parseInt(v,10);return Number.isNaN(n)?0:n;});}
+function getEntry(){
+let entry=document.getElementById("entry").value.trim();
+if(!entry)return "main.js";
+if(!entry.endsWith(".js"))entry+=".js";
+return entry;
+}
+function uuid(){return crypto.randomUUID();}
+function createBehaviorManifest(name,description,version,engine,bpUuid,rpUuid){
+const bpModuleUuid=uuid();
+const manifest={format_version:2,header:{name:name,description:description,uuid:bpUuid,version:versionArray(version),min_engine_version:versionArray(engine)},modules:[{description:description,type:"data",uuid:bpModuleUuid,version:versionArray(version)}]};
+if(useScript){
+const scriptUuid=uuid();
+manifest.modules.push({description:"Script",type:"script",language:"javascript",uuid:scriptUuid,version:versionArray(version),entry:getEntry()});
+manifest.dependencies=[{module_name:"@minecraft/server",version:getScriptVersion("serverVersion","2.7.0")}];
+if(uiCheck.checked)manifest.dependencies.push({module_name:"@minecraft/server-ui",version:getScriptVersion("uiVersion","1.1.0")});
+}
+if(rpUuid){
+if(!manifest.dependencies)manifest.dependencies=[];
+manifest.dependencies.unshift({uuid:rpUuid,version:versionArray(version)});
+}
+return manifest;
+}
+function createResourceManifest(name,description,version,engine,rpUuid,bpUuid){
+const rpModuleUuid=uuid();
+const manifest={format_version:2,header:{name:name,description:description,uuid:rpUuid,version:versionArray(version),min_engine_version:versionArray(engine)},modules:[{description:"Resources",type:"resources",uuid:rpModuleUuid,version:versionArray(version)}]};
+if(bpUuid)manifest.dependencies=[{uuid:bpUuid,version:versionArray(version)}];
+return manifest;
+}
+function createResult(title,data){
+const box=document.createElement("div");box.className="result-box";
+const titleBar=document.createElement("div");titleBar.className="result-title";
+const titleText=document.createElement("span");titleText.textContent=title;
+const copy=document.createElement("button");copy.className="copy-btn";copy.textContent="コピー";
+const pre=document.createElement("pre");const text=JSON.stringify(data,null,2);pre.textContent=text;
+copy.onclick=async()=>{await navigator.clipboard.writeText(text);copy.textContent="コピーしました";setTimeout(()=>{copy.textContent="コピー";},1500);};
+titleBar.appendChild(titleText);titleBar.appendChild(copy);box.appendChild(titleBar);box.appendChild(pre);return box;
+}
+document.getElementById("generateManifest").onclick=()=>{
+const name=getValue("name","アドオン名");
+const description=getValue("description","アドオン説明文");
+const version=getVersion("version","1.0.0");
+const engine=getVersion("engine","1.20.0");
+const result=document.getElementById("result");result.innerHTML="";
+if(packType==="bp"){
+const bpUuid=uuid();result.appendChild(createResult("ビヘイビアパック",createBehaviorManifest(name,description,version,engine,bpUuid,null)));
+}
+if(packType==="rp"){
+const rpUuid=uuid();result.appendChild(createResult("リソースパック",createResourceManifest(name,description,version,engine,rpUuid,null)));
+}
+if(packType==="both"){
+const bpUuid=uuid();const rpUuid=uuid();
+result.appendChild(createResult("ビヘイビアパック",createBehaviorManifest(name,description,version,engine,bpUuid,rpUuid)));
+result.appendChild(createResult("リソースパック",createResourceManifest(name,description,version,engine,rpUuid,bpUuid)));
+}
+};
+
+const rpFile=document.getElementById("rpFile");
+const bpFile=document.getElementById("bpFile");
+const rpName=document.getElementById("rpName");
+const bpName=document.getElementById("bpName");
+const rpDelete=document.getElementById("rpDelete");
+const bpDelete=document.getElementById("bpDelete");
+const generatePack=document.getElementById("generatePack");
+const status=document.getElementById("status");
+rpFile.onchange=()=>{rpName.textContent=rpFile.files.length?rpFile.files[0].name:"未選択";updateButton();};
+bpFile.onchange=()=>{bpName.textContent=bpFile.files.length?bpFile.files[0].name:"未選択";updateButton();};
+rpDelete.onclick=()=>{rpFile.value="";rpName.textContent="未選択";updateButton();};
+bpDelete.onclick=()=>{bpFile.value="";bpName.textContent="未選択";updateButton();};
+function updateButton(){generatePack.disabled=!rpFile.files.length&&!bpFile.files.length;}
+function setStatus(text,type=""){status.className="status "+type;status.innerHTML=text;}
+function isUnwanted(path){const parts=path.split("/").filter(Boolean);for(const part of parts){if(part==="__MACOSX"||part===".DS_Store"||part.startsWith("._")||part.startsWith("__"))return true;}return false;}
+function normalizeBuilderPath(path){return path.replace(/\\/g,"/").split("/").filter(Boolean).join("/");}
+async function findManifestRoot(zip){
+const manifests=[];zip.forEach((path,entry)=>{const clean=normalizeBuilderPath(path);if(!entry.dir&&!isUnwanted(clean)&&clean.toLowerCase().endsWith("manifest.json"))manifests.push({path:clean,entry:entry});});
+if(!manifests.length)throw new Error("manifest.jsonが見つかりません。");
+if(manifests.length>1)throw new Error("manifest.jsonが複数見つかりました。");
+const manifestPath=manifests[0].path;return manifestPath.substring(0,manifestPath.lastIndexOf("/"));
+}
+async function readBuilderPack(file,type){
+const zip=await JSZip.loadAsync(file);const root=await findManifestRoot(zip);const output={};
+zip.forEach((path,entry)=>{
+const clean=normalizeBuilderPath(path);if(!clean||isUnwanted(clean))return;
+let relative="";
+if(root){if(clean===root)return;const prefix=root+"/";if(!clean.startsWith(prefix))return;relative=clean.substring(prefix.length);}else relative=clean;
+if(!relative||relative.startsWith("__")||relative.startsWith("._"))return;output[relative]=entry;
+});
+if(!output["manifest.json"])throw new Error(type+"のmanifest.jsonを正しく検出できませんでした。");
+const manifest=await getBuilderManifest(output);if(!manifest)throw new Error(type+"のmanifest.jsonを読み込めません。");
+if(!Array.isArray(manifest.modules))throw new Error(type+"のmanifest.jsonにmodulesがありません。");
+const moduleTypes=manifest.modules.map(module=>module.type).filter(Boolean);
+let detectedType=null;if(moduleTypes.includes("resources"))detectedType="RP";else if(moduleTypes.includes("data"))detectedType="BP";
+if(!detectedType)throw new Error(type+"のmanifest.jsonからRP/BPを判定できません。");
+if(detectedType!==type)throw new Error(type+"として選択されていますが、manifest.jsonは"+(detectedType==="RP"?"リソースパック":"ビヘイビアパック")+"です。");
+return output;
+}
+async function addBuilderPackToZip(target,pack){for(const path in pack){const entry=pack[path];if(entry.dir){target.folder(path);continue;}target.file(path,await entry.async("uint8array"));}}
+async function getBuilderManifest(pack){if(!pack["manifest.json"])return null;try{return JSON.parse(await pack["manifest.json"].async("string"));}catch{return null;}}
+function getPackName(manifest,fallback){if(manifest&&manifest.header&&typeof manifest.header.name==="string"&&manifest.header.name.trim())return manifest.header.name.trim();return fallback;}
+function safeFileName(name){return name.replace(/[\\/:*?"<>|]/g,"").replace(/\s+/g," ").trim().replace(/\.+$/,"")||"Addon";}
+async function createMcpack(pack,type){
+const manifest=await getBuilderManifest(pack);const zip=new JSZip();await addBuilderPackToZip(zip,pack);
+const fallback=type==="RP"?"ResourcePack":"BehaviorPack";const name=safeFileName(getPackName(manifest,fallback));
+const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:9}});downloadBuilder(blob,name+".mcpack");return name+".mcpack";
+}
+async function createMcaddon(rp,bp){
+const zip=new JSZip();const rpFolder=zip.folder("RP");const bpFolder=zip.folder("BP");await addBuilderPackToZip(rpFolder,rp);await addBuilderPackToZip(bpFolder,bp);
+let name=safeFileName("Addon");const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:9}});downloadBuilder(blob,name+".mcaddon");return name+".mcaddon";
+}
+function downloadBuilder(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>{URL.revokeObjectURL(url);},1000);}
+generatePack.onclick=async()=>{
+generatePack.disabled=true;
+try{
+const hasRP=rpFile.files.length>0;const hasBP=bpFile.files.length>0;if(!hasRP&&!hasBP)throw new Error("ZIPを1つ以上選択してください。");
+setStatus("ZIPを読み込んでいます...");let rp=null;let bp=null;const missing=[];
+if(hasBP){setStatus("BP ZIPを解析しています...");try{bp=await readBuilderPack(bpFile.files[0],"BP");}catch(error){if(error.message==="manifest.jsonが見つかりません。")missing.push("BP");else throw error;}}
+if(hasRP){setStatus("RP ZIPを解析しています...");try{rp=await readBuilderPack(rpFile.files[0],"RP");}catch(error){if(error.message==="manifest.jsonが見つかりません。")missing.push("RP");else throw error;}}
+if(missing.length)throw new Error(missing.join(",")+"のmanifestが見つかりません。");
+if(hasRP&&hasBP){setStatus("RPとBPを整理してmcaddonを生成しています...");const fileName=await createMcaddon(rp,bp);setStatus("✓ mcaddonを生成しました<br><br><strong>"+fileName+"</strong>","success");}
+else if(hasRP){setStatus("RPを整理してmcpackを生成しています...");const fileName=await createMcpack(rp,"RP");setStatus("✓ mcpackを生成しました<br><br><strong>"+fileName+"</strong>","success");}
+else{setStatus("BPを整理してmcpackを生成しています...");const fileName=await createMcpack(bp,"BP");setStatus("✓ mcpackを生成しました<br><br><strong>"+fileName+"</strong>","success");}
+}catch(error){setStatus("✕ "+error.message,"error");}finally{generatePack.disabled=false;}
+};
+updateButton();
+
+const mcEditorFileInput=document.getElementById("mcEditorFileInput");
+const mcEditorNewFileInput=document.getElementById("mcEditorNewFileInput");
+const mcEditorFileName=document.getElementById("mcEditorFileName");
+const mcEditorFileTree=document.getElementById("mcEditorFileTree");
+const mcEditorTitle=document.getElementById("mcEditorTitle");
+const mcEditorPath=document.getElementById("mcEditorPath");
+const mcEditorContent=document.getElementById("mcEditorContent");
+const mcEditorSaveButton=document.getElementById("mcEditorSaveButton");
+const mcEditorFileDownloadButton=document.getElementById("mcEditorFileDownloadButton");
+const mcEditorMcpackButton=document.getElementById("mcEditorMcpackButton");
+const mcEditorZipButton=document.getElementById("mcEditorZipButton");
+const mcEditorTreeTools=document.getElementById("mcEditorTreeTools");
+const mcEditorMoveButton=document.getElementById("mcEditorMoveButton");
+const mcEditorRenameButton=document.getElementById("mcEditorRenameButton");
+const mcEditorDeleteButton=document.getElementById("mcEditorDeleteButton");
+const mcEditorNewFileButton=document.getElementById("mcEditorNewFileButton");
+const mcEditorNewJsonButton=document.getElementById("mcEditorNewJsonButton");
+const mcEditorUploadButton=document.getElementById("mcEditorUploadButton");
+const mcEditorDeselectButton=document.getElementById("mcEditorDeselectButton");
+
+let mcEditorZip=null;
+let mcEditorSelectedPath="";
+let mcEditorSelectedType="";
+let mcEditorOutputName="edited.zip";
+let mcEditorAddonDetected=false;
+let mcEditorPackRoots=[];
+let mcEditorOpenFolders=new Set();
+let mcEditorImageState={scale:1,x:0,y:0};
+let mcEditorImageObjectUrl="";
+let mcEditorMoveModePath="";
+let mcEditorMoveTargetFolder="";
+function mcEditorNormalizePath(path){return String(path||"").replace(/\\/g,"/").replace(/^\/+/,"").replace(/\/+/g,"/").replace(/^\.\//,"");}
+function mcEditorBaseName(path){const p=mcEditorNormalizePath(path);return p.split("/").pop()||"";}
+function mcEditorDirectoryName(path){const p=mcEditorNormalizePath(path);const a=p.split("/");a.pop();return a.join("/");}
+function mcEditorGetSelectedDirectory(){if(!mcEditorSelectedPath)return "";if(mcEditorSelectedType==="folder")return mcEditorNormalizePath(mcEditorSelectedPath);return mcEditorDirectoryName(mcEditorSelectedPath);}
+function mcEditorIsImage(path){return /\.(png|jpe?g|webp|gif|svg)$/i.test(path);}
+function mcEditorIsAudio(path){return /\.(ogg|mp3|wav|m4a|aac|flac)$/i.test(path);}
+function mcEditorIsText(path){return !mcEditorIsImage(path)&&!mcEditorIsAudio(path);}
+function mcEditorUpdateTreeTools(){
+const visible=!!mcEditorZip;mcEditorTreeTools.style.display=visible?"flex":"none";
+mcEditorNewFileButton.disabled=!visible;mcEditorNewJsonButton.disabled=!visible;mcEditorUploadButton.disabled=!visible;
+const selected=!!mcEditorSelectedPath;
+mcEditorMoveButton.disabled=!selected||!!mcEditorMoveModePath;
+mcEditorRenameButton.disabled=!selected||!!mcEditorMoveModePath;
+mcEditorDeleteButton.disabled=!selected||!!mcEditorMoveModePath;
+mcEditorDeselectButton.disabled=!selected||!!mcEditorMoveModePath;
+}
+function mcEditorClearImageUrl(){if(mcEditorImageObjectUrl){URL.revokeObjectURL(mcEditorImageObjectUrl);mcEditorImageObjectUrl="";}}
+function mcEditorUpdateImageTransform(){
+const transform=document.getElementById("mcEditorImageTransform");if(!transform)return;
+transform.style.transform=`translate(${mcEditorImageState.x}px,${mcEditorImageState.y}px) scale(${mcEditorImageState.scale})`;
+const zoom=document.getElementById("mcEditorZoomValue");if(zoom)zoom.textContent=Math.round(mcEditorImageState.scale*100)+"%";
+}
+function mcEditorResetImage(){mcEditorImageState={scale:1,x:0,y:0};mcEditorUpdateImageTransform();}
+function mcEditorShowImage(data,path){
+mcEditorClearImageUrl();const blob=new Blob([data]);mcEditorImageObjectUrl=URL.createObjectURL(blob);
+mcEditorContent.innerHTML=`<div class="image-area"><div class="image-toolbar"><button id="mcEditorImageReset">↺</button><div class="zoom-value" id="mcEditorZoomValue">100%</div></div><div class="image-canvas" id="mcEditorImageCanvas"><div class="image-transform" id="mcEditorImageTransform"><img id="mcEditorPreviewImage"></div></div></div>`;
+const img=document.getElementById("mcEditorPreviewImage");img.src=mcEditorImageObjectUrl;mcEditorSaveButton.disabled=true;mcEditorResetImage();
+const reset=document.getElementById("mcEditorImageReset");const canvas=document.getElementById("mcEditorImageCanvas");reset.onclick=()=>{mcEditorResetImage();};
+let dragging=false,startX=0,startY=0,startPX=0,startPY=0;const pointers=new Map();let pinchStartDistance=0,pinchStartScale=1,pinchStartCenterX=0,pinchStartCenterY=0,pinchStartImageX=0,pinchStartImageY=0;
+function getPointerDistance(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy);}
+function getPointerCenter(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+canvas.addEventListener("pointerdown",e=>{
+e.preventDefault();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});try{canvas.setPointerCapture(e.pointerId);}catch{}
+if(pointers.size===1){dragging=true;startX=e.clientX;startY=e.clientY;startPX=mcEditorImageState.x;startPY=mcEditorImageState.y;return;}
+if(pointers.size===2){const pts=[...pointers.values()],a=pts[0],b=pts[1];pinchStartDistance=getPointerDistance(a,b);pinchStartScale=mcEditorImageState.scale;const center=getPointerCenter(a,b);pinchStartCenterX=center.x;pinchStartCenterY=center.y;pinchStartImageX=mcEditorImageState.x;pinchStartImageY=mcEditorImageState.y;dragging=false;}
+});
+canvas.addEventListener("pointermove",e=>{
+if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+if(pointers.size===2){
+const pts=[...pointers.values()],a=pts[0],b=pts[1];const distance=getPointerDistance(a,b);if(!pinchStartDistance)return;
+const ratio=distance/pinchStartDistance;mcEditorImageState.scale=Math.max(.1,Math.min(20,pinchStartScale*ratio));
+const center=getPointerCenter(a,b);const rect=canvas.getBoundingClientRect();const originX=rect.width/2,originY=rect.height/2;
+const currentCenterX=center.x-rect.left,currentCenterY=center.y-rect.top,startCenterX=pinchStartCenterX-rect.left,startCenterY=pinchStartCenterY-rect.top,scaleRatio=mcEditorImageState.scale/pinchStartScale;
+mcEditorImageState.x=currentCenterX-originX-(startCenterX-originX-pinchStartImageX)*scaleRatio;
+mcEditorImageState.y=currentCenterY-originY-(startCenterY-originY-pinchStartImageY)*scaleRatio;mcEditorUpdateImageTransform();return;
+}
+if(pointers.size===1&&dragging){mcEditorImageState.x=startPX+(e.clientX-startX);mcEditorImageState.y=startPY+(e.clientY-startY);mcEditorUpdateImageTransform();}
+});
+function pointerEnd(e){
+pointers.delete(e.pointerId);try{canvas.releasePointerCapture(e.pointerId);}catch{}
+if(pointers.size===1){const remaining=[...pointers.values()][0];dragging=true;startX=remaining.x;startY=remaining.y;startPX=mcEditorImageState.x;startPY=mcEditorImageState.y;}else dragging=false;
+if(pointers.size<2)pinchStartDistance=0;
+}
+canvas.addEventListener("pointerup",pointerEnd);canvas.addEventListener("pointercancel",pointerEnd);
+canvas.addEventListener("wheel",e=>{
+e.preventDefault();const rect=canvas.getBoundingClientRect();const mouseX=e.clientX-rect.left-rect.width/2,mouseY=e.clientY-rect.top-rect.height/2,oldScale=mcEditorImageState.scale;
+if(e.deltaY<0)mcEditorImageState.scale=Math.min(20,mcEditorImageState.scale*1.1);else mcEditorImageState.scale=Math.max(.1,mcEditorImageState.scale/1.1);
+const ratio=mcEditorImageState.scale/oldScale;mcEditorImageState.x=mouseX-(mouseX-mcEditorImageState.x)*ratio;mcEditorImageState.y=mouseY-(mouseY-mcEditorImageState.y)*ratio;mcEditorUpdateImageTransform();
+},{passive:false});
+}
+function mcEditorGetAudioMime(path){const ext=mcEditorNormalizePath(path).split(".").pop().toLowerCase();const map={ogg:"audio/ogg",mp3:"audio/mpeg",wav:"audio/wav",m4a:"audio/mp4",aac:"audio/aac",flac:"audio/flac"};return map[ext]||"application/octet-stream";}
+function mcEditorShowAudio(data,path){
+mcEditorClearImageUrl();const blob=new Blob([data],{type:mcEditorGetAudioMime(path)});mcEditorImageObjectUrl=URL.createObjectURL(blob);
+mcEditorContent.innerHTML=`<div class="image-area"><div class="image-toolbar"><div class="zoom-value">🔉 音声プレビュー</div></div><div class="image-canvas" style="display:flex;align-items:center;justify-content:center;padding:20px;touch-action:pan-y;"><audio controls style="width:100%;max-width:600px;" src="${mcEditorImageObjectUrl}"></audio></div></div>`;
+mcEditorSaveButton.disabled=true;
+}
+function mcEditorShowText(path,text){
+mcEditorContent.innerHTML="";const textarea=document.createElement("textarea");textarea.value=text;textarea.id="mcEditorTextarea";mcEditorContent.appendChild(textarea);mcEditorSaveButton.disabled=false;
+mcEditorSaveButton.onclick=async()=>{if(!mcEditorZip||!mcEditorSelectedPath)return;mcEditorZip.file(mcEditorSelectedPath,textarea.value);await mcEditorRefreshAddonDetection();mcEditorRenderTree();mcEditorSaveButton.textContent="保存しました";setTimeout(()=>{mcEditorSaveButton.textContent="保存";},1000);};
+}
+function mcEditorShowEmpty(){mcEditorContent.innerHTML=`<div class="editor-empty">このファイルは編集できません</div>`;mcEditorSaveButton.disabled=true;}
+function mcEditorBuildTree(){
+const root={folders:new Map(),files:[]};const directoryEntries=[],fileEntries=[];
+mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path).replace(/\/$/,"");if(!normalized)return;if(entry.dir)directoryEntries.push(normalized);else fileEntries.push(normalized);});
+function ensureFolder(pathParts){let node=root;for(const part of pathParts){if(!part)continue;if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}}
+for(const path of directoryEntries)ensureFolder(path.split("/"));
+fileEntries.sort((a,b)=>a.localeCompare(b));
+for(const path of fileEntries){const parts=path.split("/"),file=parts.pop();let node=root;for(const part of parts){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}if(file)node.files.push(file);}
+return root;
+}
+function mcEditorRenderTree(){
+if(!mcEditorZip){mcEditorFileTree.innerHTML=`<div class="editor-empty">ファイルを選択してください</div>`;mcEditorUpdateTreeTools();return;}
+const root=mcEditorBuildTree();mcEditorFileTree.innerHTML="";const fragment=document.createDocumentFragment();
+function renderNode(node,parentPath,depth){
+const folders=[...node.folders.keys()].sort((a,b)=>{if(mcEditorMoveModePath){const aSpecial=a.toUpperCase()==="RP"||a.toUpperCase()==="BP",bSpecial=b.toUpperCase()==="RP"||b.toUpperCase()==="BP";if(aSpecial&&!bSpecial)return-1;if(!aSpecial&&bSpecial)return 1;}return a.localeCompare(b);});
+const files=[...node.files].sort((a,b)=>a.localeCompare(b));
+for(const folderName of folders){
+const fullPath=parentPath?parentPath+"/"+folderName:folderName;const open=mcEditorMoveModePath?true:mcEditorOpenFolders.has(fullPath);const button=document.createElement("button");button.className="tree-item folder tree-indent-"+Math.min(depth+1,5);button.dataset.path=fullPath;button.dataset.folder="true";
+if(mcEditorSelectedPath===fullPath)button.classList.add("selected-folder");if(mcEditorMoveTargetFolder===fullPath)button.classList.add("selected-folder");
+button.innerHTML=`<span class="tree-arrow">${open?"▼":"▶"}</span>${mcEditorEscapeHtml(folderName)}`;
+button.onclick=async()=>{
+if(mcEditorMoveModePath){if(fullPath===mcEditorMoveModePath||fullPath.startsWith(mcEditorMoveModePath+"/"))return;mcEditorMoveTargetFolder=fullPath;mcEditorRenderTree();return;}
+mcEditorSelectedPath=fullPath;mcEditorSelectedType="folder";mcEditorMoveTargetFolder="";mcEditorTitle.textContent=folderName;mcEditorPath.textContent=fullPath;mcEditorFileDownloadButton.disabled=true;mcEditorSaveButton.disabled=true;mcEditorContent.innerHTML=`<div class="editor-empty">フォルダを選択しています</div>`;
+if(open)mcEditorOpenFolders.delete(fullPath);else mcEditorOpenFolders.add(fullPath);mcEditorRenderTree();
+};
+fragment.appendChild(button);if(open)renderNode(node.folders.get(folderName),fullPath,depth+1);
+}
+if(!mcEditorMoveModePath){
+for(const file of files){
+const fullPath=parentPath?parentPath+"/"+file:file;const button=document.createElement("button");button.className="tree-item file tree-indent-"+Math.min(depth,5);button.dataset.path=fullPath;button.dataset.folder="false";if(mcEditorSelectedPath===fullPath)button.classList.add("selected-file");
+button.innerHTML=`<span class="tree-arrow"></span><span>${mcEditorGetFileIcon(file)}</span>${mcEditorEscapeHtml(file)}`;button.onclick=async()=>{if(mcEditorMoveModePath)return;await mcEditorOpenFile(fullPath);};fragment.appendChild(button);
+}
+}
+}
+renderNode(root,"",0);mcEditorFileTree.appendChild(fragment);
+if(mcEditorMoveModePath){
+const panel=document.createElement("div");panel.className="move-panel visible";const text=document.createElement("div");text.className="move-panel-text";text.textContent=mcEditorMoveTargetFolder?`移動先: ${mcEditorMoveTargetFolder}`:"移動先: ルート";
+const buttons=document.createElement("div");buttons.className="move-panel-buttons";const cancel=document.createElement("button");cancel.textContent="キャンセル";cancel.onclick=()=>{mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorRenderTree();};
+const confirmButton=document.createElement("button");confirmButton.className="move-confirm";confirmButton.textContent="移動";confirmButton.onclick=async()=>{await mcEditorMoveSelectedFile(mcEditorMoveTargetFolder);};buttons.appendChild(cancel);buttons.appendChild(confirmButton);panel.appendChild(text);panel.appendChild(buttons);mcEditorFileTree.appendChild(panel);
+}
+mcEditorUpdateTreeTools();
+}
+function mcEditorGetFileIcon(path){if(mcEditorIsImage(path))return"🖼️";if(mcEditorIsAudio(path))return"🔉";return"📄";}
+function mcEditorEscapeHtml(value){return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");}
+async function mcEditorOpenFile(path){
+if(!mcEditorZip||mcEditorMoveModePath)return;path=mcEditorNormalizePath(path);const entry=mcEditorZip.file(path);if(!entry)return;mcEditorSelectedPath=path;
+if(mcEditorIsImage(path))mcEditorSelectedType="image";else if(mcEditorIsAudio(path))mcEditorSelectedType="audio";else mcEditorSelectedType="text";
+mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorTitle.textContent=mcEditorBaseName(path);mcEditorPath.textContent=path;mcEditorFileDownloadButton.disabled=false;mcEditorRenderTree();
+if(mcEditorIsImage(path)){mcEditorShowImage(await entry.async("uint8array"),path);return;}
+if(mcEditorIsAudio(path)){mcEditorShowAudio(await entry.async("uint8array"),path);return;}
+if(mcEditorIsText(path)){try{mcEditorShowText(path,await entry.async("string"));}catch{mcEditorShowEmpty();}return;}
+mcEditorShowEmpty();
+}
+async function mcEditorMoveSelectedFile(targetFolder){
+if(!mcEditorZip||!mcEditorMoveModePath)return;const source=mcEditorNormalizePath(mcEditorMoveModePath),target=mcEditorNormalizePath(targetFolder),name=mcEditorBaseName(source),newPath=target?target+"/"+name:name;
+if(newPath===source){mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorRenderTree();return;}
+if(source===target||target.startsWith(source+"/")){alert("自分自身またはその中には移動できません。");return;}
+let duplicate=false;mcEditorZip.forEach((path,entry)=>{if(mcEditorNormalizePath(path).replace(/\/$/,"")===newPath)duplicate=true;});if(duplicate){alert("同名の項目が存在します。");return;}
+const sourceEntry=mcEditorZip.file(source);
+if(sourceEntry){const data=await sourceEntry.async("uint8array");mcEditorZip.remove(source);mcEditorZip.file(newPath,data);}
+else{
+let found=false;const entries=[];mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path);if(normalized===source||normalized.startsWith(source+"/")){entries.push({path:normalized,entry:entry});found=true;}});
+if(!found){mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorRenderTree();return;}
+for(const item of entries){const relative=item.path===source?"":item.path.slice(source.length+1),destination=newPath+(relative?"/"+relative:"");if(item.entry.dir)mcEditorZip.folder(destination);else mcEditorZip.file(destination,await item.entry.async("uint8array"));}
+for(const item of entries)mcEditorZip.remove(item.path);
+}
+mcEditorSelectedPath=newPath;mcEditorMoveModePath="";mcEditorMoveTargetFolder="";await mcEditorRefreshAddonDetection();mcEditorRenderTree();
+if(mcEditorZip.file(newPath))await mcEditorOpenFile(newPath);else{mcEditorSelectedType="folder";mcEditorTitle.textContent=mcEditorBaseName(newPath);mcEditorPath.textContent=newPath;mcEditorFileDownloadButton.disabled=true;mcEditorSaveButton.disabled=true;mcEditorContent.innerHTML=`<div class="editor-empty">フォルダを選択しています</div>`;mcEditorRenderTree();}
+}
+async function mcEditorRenameSelected(){
+if(!mcEditorZip||!mcEditorSelectedPath)return;const oldPath=mcEditorNormalizePath(mcEditorSelectedPath),oldName=mcEditorBaseName(oldPath);const input=prompt("新しい名前を入力してください",oldName);if(input===null)return;let newName=input.trim();if(!newName)return;newName=newName.replace(/[\\\/]/g,"");if(!newName){alert("名前が不正です。");return;}
+const directory=mcEditorDirectoryName(oldPath),newPath=directory?directory+"/"+newName:newName;if(newPath===oldPath)return;let duplicate=false;mcEditorZip.forEach((path,entry)=>{if(mcEditorNormalizePath(path).replace(/\/$/,"")===newPath)duplicate=true;});if(duplicate){alert("同名の項目が存在します。");return;}
+const fileEntry=mcEditorZip.file(oldPath);
+if(fileEntry){const data=await fileEntry.async("uint8array");mcEditorZip.remove(oldPath);mcEditorZip.file(newPath,data);}
+else{
+const entries=[];mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path);if(normalized===oldPath||normalized.startsWith(oldPath+"/"))entries.push({path:normalized,entry:entry});});if(!entries.length)return;
+for(const item of entries){const relative=item.path===oldPath?"":item.path.slice(oldPath.length+1),destination=newPath+(relative?"/"+relative:"");if(item.entry.dir)mcEditorZip.folder(destination);else mcEditorZip.file(destination,await item.entry.async("uint8array"));}
+for(const item of entries)mcEditorZip.remove(item.path);
+}
+mcEditorSelectedPath=newPath;await mcEditorRefreshAddonDetection();mcEditorRenderTree();
+if(mcEditorZip.file(newPath))await mcEditorOpenFile(newPath);else{mcEditorSelectedType="folder";mcEditorTitle.textContent=mcEditorBaseName(newPath);mcEditorPath.textContent=newPath;mcEditorFileDownloadButton.disabled=true;mcEditorSaveButton.disabled=true;mcEditorContent.innerHTML=`<div class="editor-empty">フォルダを選択しています</div>`;mcEditorRenderTree();}
+}
+async function mcEditorDeleteSelected(){
+if(!mcEditorZip||!mcEditorSelectedPath)return;const path=mcEditorSelectedPath;if(!confirm(`「${mcEditorBaseName(path)}」を削除しますか？`))return;const fileEntry=mcEditorZip.file(path);
+if(fileEntry)mcEditorZip.remove(path);else{const removeList=[];mcEditorZip.forEach((entryPath,entry)=>{const normalized=mcEditorNormalizePath(entryPath);if(normalized===path||normalized.startsWith(path+"/"))removeList.push(normalized);});for(const entryPath of removeList)mcEditorZip.remove(entryPath);}
+mcEditorSelectedPath="";mcEditorSelectedType="";mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorTitle.textContent="編集";mcEditorPath.textContent="";mcEditorContent.innerHTML=`<div class="editor-empty">ファイル構成から項目をタップしてください</div>`;mcEditorSaveButton.disabled=true;mcEditorFileDownloadButton.disabled=true;await mcEditorRefreshAddonDetection();mcEditorRenderTree();
+}
+function mcEditorDeselect(){
+if(!mcEditorZip)return;mcEditorSelectedPath="";mcEditorSelectedType="";mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorTitle.textContent="編集";mcEditorPath.textContent="";mcEditorContent.innerHTML=`<div class="editor-empty">ファイル構成から項目をタップしてください</div>`;mcEditorSaveButton.disabled=true;mcEditorFileDownloadButton.disabled=true;mcEditorRenderTree();
+}
+function mcEditorCreateNewFile(){
+if(!mcEditorZip)return;const name=prompt("新規フォルダ名を入力してください");if(!name)return;let folderName=mcEditorNormalizePath(name).replace(/\/+$/,"");if(!folderName)return;const parts=folderName.split("/");if(parts.some(part=>part==="."||part==="..")){alert("フォルダ名が不正です。");return;}
+const parent=mcEditorGetSelectedDirectory(),path=parent?parent+"/"+folderName:folderName;let exists=false;mcEditorZip.forEach((entryPath,entry)=>{const normalized=mcEditorNormalizePath(entryPath).replace(/\/+$/,"");if(normalized===path||normalized.startsWith(path+"/"))exists=true;});if(exists){alert("同名のフォルダが存在します。");return;}mcEditorZip.folder(path);mcEditorRenderTree();mcEditorRefreshAddonDetection().then(()=>{mcEditorRenderTree();});
+}
+function mcEditorCreateNewJson(){
+if(!mcEditorZip)return;const name=prompt("新規JSONファイル名を入力してください");if(!name)return;let fileNameInput=mcEditorNormalizePath(name);if(!fileNameInput)return;if(!fileNameInput.toLowerCase().endsWith(".json"))fileNameInput+=".json";const parent=mcEditorGetSelectedDirectory(),path=parent?parent+"/"+fileNameInput:fileNameInput;if(mcEditorZip.file(path)){alert("同名のファイルが存在します。");return;}mcEditorZip.file(path,JSON.stringify({},null,2));mcEditorRenderTree();mcEditorRefreshAddonDetection().then(()=>{mcEditorRenderTree();});
+}
+async function mcEditorUploadFiles(files){
+if(!mcEditorZip)return;const parent=mcEditorGetSelectedDirectory();
+for(const file of files){let name=mcEditorNormalizePath(file.name);if(!name)continue;let path=parent?parent+"/"+name:name;if(mcEditorZip.file(path)){const overwrite=confirm(`「${path}」は既に存在します。\n上書きしますか？`);if(!overwrite)continue;}mcEditorZip.file(path,new Uint8Array(await file.arrayBuffer()));}
+mcEditorRemoveUnnecessaryFiles();await mcEditorRefreshAddonDetection();mcEditorRenderTree();
+}
+function mcEditorIsUnnecessaryPath(path){
+const normalized=mcEditorNormalizePath(path).replace(/\/+$/,"");if(!normalized)return false;const parts=normalized.split("/");
+for(const part of parts){if(part.startsWith("__")||part.startsWith("._")||part===".DS_Store"||part==="Thumbs.db"||part==="Desktop.ini")return true;}return false;
+}
+function mcEditorRemoveUnnecessaryFiles(){
+if(!mcEditorZip)return;const removeList=[];mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path);if(mcEditorIsUnnecessaryPath(normalized))removeList.push(normalized);});for(const path of [...new Set(removeList)])mcEditorZip.remove(path);
+}
+async function mcEditorNormalizePackStructure(){
+if(!mcEditorZip)return;const packTypes=["RP","BP"];
+for(const packType of packTypes){
+const entries=[];mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path);if(normalized)entries.push({path:normalized,entry:entry});});
+const candidates=entries.filter(item=>item.path.replace(/\/$/,"").split("/").some(part=>part.toUpperCase()===packType));if(!candidates.length)continue;
+let packRoot="";
+for(const item of candidates){const parts=item.path.replace(/\/$/,"").split("/"),index=parts.findIndex(part=>part.toUpperCase()===packType);if(index<0)continue;const candidate=parts.slice(0,index+1).join("/");if(!packRoot||candidate.length<packRoot.length)packRoot=candidate;}
+if(!packRoot)continue;
+const packEntries=entries.filter(item=>item.path===packRoot||item.path.startsWith(packRoot+"/"));
+for(const item of packEntries){
+const oldPath=item.path,cleanOldPath=oldPath.replace(/\/$/,""),parts=cleanOldPath.split("/"),index=parts.findIndex(part=>part.toUpperCase()===packType);if(index<0)continue;const newPath=parts.slice(index).join("/");if(cleanOldPath===newPath)continue;
+if(item.entry.dir)mcEditorZip.folder(newPath);else{const data=await item.entry.async("uint8array");if(!mcEditorZip.file(newPath))mcEditorZip.file(newPath,data);}
+mcEditorZip.remove(oldPath);
+}
+}
+const wrapperDirs=[];mcEditorZip.forEach((path,entry)=>{if(!entry.dir)return;const normalized=mcEditorNormalizePath(path).replace(/\/+$/,"");if(!normalized)return;if(normalized.split("/").some(part=>part.toUpperCase()==="RP"||part.toUpperCase()==="BP"))return;wrapperDirs.push(normalized);});
+wrapperDirs.sort((a,b)=>b.split("/").length-a.split("/").length);
+for(const dir of wrapperDirs){let hasChild=false;mcEditorZip.forEach((path,entry)=>{const normalized=mcEditorNormalizePath(path).replace(/\/+$/,"");if(normalized!==dir&&normalized.startsWith(dir+"/"))hasChild=true;});if(!hasChild)mcEditorZip.remove(dir+"/");}
+}
+async function mcEditorRefreshAddonDetection(){
+let hasRP=false,hasBP=false;if(!mcEditorZip){mcEditorAddonDetected=false;mcEditorPackRoots=[];return false;}
+const manifests=[];mcEditorZip.forEach((path,entry)=>{if(entry.dir)return;const normalized=mcEditorNormalizePath(path);if(normalized.toLowerCase()==="manifest.json"||normalized.toLowerCase().endsWith("/manifest.json"))manifests.push({path:normalized,entry:entry});});
+for(const item of manifests){
+try{
+const manifest=JSON.parse(await item.entry.async("string"));if(!manifest||typeof manifest!=="object"||!manifest.header||typeof manifest.header.uuid!=="string"||!Array.isArray(manifest.header.version)||manifest.header.version.length!==3||!Array.isArray(manifest.modules)||manifest.modules.length===0)continue;
+let isRP=false,isBP=false;for(const module of manifest.modules){if(!module||typeof module.type!=="string")continue;if(module.type==="resources")isRP=true;if(module.type==="data"||module.type==="script"||module.type==="client_data"||module.type==="interface"||module.type==="world_template")isBP=true;}
+const parts=item.path.split("/").map(part=>part.toUpperCase());if(parts.includes("RP"))isRP=true;if(parts.includes("BP"))isBP=true;if(isRP)hasRP=true;if(isBP)hasBP=true;
+}catch(e){}
+}
+mcEditorAddonDetected=hasRP&&hasBP;mcEditorPackRoots=[];mcEditorZip.forEach((path,entry)=>{if(entry.dir)return;const normalized=mcEditorNormalizePath(path),parts=normalized.split("/");if(parts.length<2)return;const root=parts[0].toUpperCase();if((root==="RP"||root==="BP")&&!mcEditorPackRoots.includes(root))mcEditorPackRoots.push(root);});
+return mcEditorAddonDetected;
+}
+async function mcEditorReadPack(){
+const file=mcEditorFileInput.files[0];if(!file)return;const name=file.name.toLowerCase();
+if(!name.endsWith(".mcaddon")&&!name.endsWith(".mcpack")&&!name.endsWith(".zip")){mcEditorFileInput.value="";mcEditorFileName.textContent="未選択";alert("このファイル形式には対応していません。\n\nmcaddon / mcpack / zipを選択してください。");return;}
+mcEditorFileName.textContent=file.name;mcEditorOutputName=file.name;
+try{
+const data=await file.arrayBuffer();const testZip=await JSZip.loadAsync(data);let validAddon=false;const manifestFiles=[];
+testZip.forEach((path,entry)=>{if(entry.dir)return;const normalized=mcEditorNormalizePath(path);if(normalized.toLowerCase()==="manifest.json"||normalized.toLowerCase().endsWith("/manifest.json"))manifestFiles.push({path:normalized,entry:entry});});
+for(const manifest of manifestFiles){
+try{
+const manifestData=JSON.parse(await manifest.entry.async("string"));
+if(manifestData&&typeof manifestData==="object"&&manifestData.header&&typeof manifestData.header==="object"&&typeof manifestData.header.uuid==="string"&&Array.isArray(manifestData.header.version)&&manifestData.header.version.length===3&&Array.isArray(manifestData.modules)&&manifestData.modules.length>0){
+const validModule=manifestData.modules.some(module=>module&&typeof module==="object"&&typeof module.type==="string"&&["resources","data","client_data","interface","world_template","script"].includes(module.type));if(validModule){validAddon=true;break;}
+}
+}catch{}
+}
+if(!validAddon){
+mcEditorZip=null;mcEditorFileTree.innerHTML=`<div class="editor-empty">Minecraftアドオンではありません</div>`;mcEditorContent.innerHTML=`<div class="editor-empty">manifest.jsonがMinecraft Bedrockアドオンの形式ではありません</div>`;mcEditorSaveButton.disabled=true;mcEditorFileDownloadButton.disabled=true;mcEditorMcpackButton.disabled=true;mcEditorZipButton.disabled=true;mcEditorUpdateTreeTools();mcEditorFileName.textContent="未選択";alert("Minecraft Bedrockアドオンではないため読み込めません。\n\nmanifest.jsonを確認してください。");mcEditorFileInput.value="";return;
+}
+mcEditorZip=testZip;mcEditorRemoveUnnecessaryFiles();await mcEditorNormalizePackStructure();mcEditorRemoveUnnecessaryFiles();mcEditorSelectedPath="";mcEditorSelectedType="";mcEditorMoveModePath="";mcEditorMoveTargetFolder="";mcEditorOpenFolders.clear();mcEditorTitle.textContent="編集";mcEditorPath.textContent="";mcEditorContent.innerHTML=`<div class="editor-empty">ファイル構成から項目をタップしてください</div>`;mcEditorSaveButton.disabled=true;mcEditorFileDownloadButton.disabled=true;mcEditorMcpackButton.disabled=false;mcEditorZipButton.disabled=false;await mcEditorRefreshAddonDetection();mcEditorRenderTree();mcEditorUpdateTreeTools();
+}catch(error){
+mcEditorZip=null;mcEditorFileTree.innerHTML=`<div class="editor-empty">ファイルを読み込めませんでした</div>`;mcEditorContent.innerHTML=`<div class="editor-empty">読み込みに失敗しました</div>`;mcEditorSaveButton.disabled=true;mcEditorFileDownloadButton.disabled=true;mcEditorMcpackButton.disabled=true;mcEditorZipButton.disabled=true;mcEditorUpdateTreeTools();alert("ファイルの読み込みに失敗しました。");
+}
+}
+async function mcEditorDownloadBlob(blob,name){
+
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+
+a.href=url;
+a.download=name;
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>{
+URL.revokeObjectURL(url);
+},1000);
+
+}
+
+async function mcEditorDownloadSelectedFile(){
+
+if(!mcEditorZip||!mcEditorSelectedPath)return;
+
+const entry=mcEditorZip.file(mcEditorSelectedPath);
+
+if(!entry)return;
+
+const data=await entry.async("blob");
+
+await mcEditorDownloadBlob(
+data,
+mcEditorBaseName(mcEditorSelectedPath)
+);
+
+}
+
+async function mcEditorMakeZip(){
+
+if(!mcEditorZip)return null;
+
+mcEditorRemoveUnnecessaryFiles();
+
+return await mcEditorZip.generateAsync({
+type:"blob",
+compression:"DEFLATE",
+compressionOptions:{
+level:6
+}
+});
+
+}
+
+async function mcEditorDownloadZip(){
+
+if(!mcEditorZip)return;
+
+const blob=await mcEditorMakeZip();
+
+if(!blob)return;
+
+await mcEditorDownloadBlob(
+blob,
+mcEditorOutputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+)+".zip"
+);
+
+}
+
+async function mcEditorDownloadMcPack(){
+
+if(!mcEditorZip)return;
+
+const blob=await mcEditorMakeZip();
+
+if(!blob)return;
+
+let name=mcEditorOutputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+);
+
+if(!name){
+
+name="edited";
+
+}
+
+await mcEditorDownloadBlob(
+blob,
+name+(mcEditorAddonDetected?".mcaddon":".mcpack")
+);
+
+}
+
+mcEditorFileInput.addEventListener(
+"change",
+mcEditorReadPack
+);
+
+mcEditorMoveButton.onclick=()=>{
+
+if(!mcEditorSelectedPath)return;
+
+mcEditorMoveModePath=mcEditorSelectedPath;
+mcEditorMoveTargetFolder=
+mcEditorDirectoryName(mcEditorSelectedPath);
+
+mcEditorRenderTree();
+
+};
+
+mcEditorRenameButton.onclick=()=>{
+
+mcEditorRenameSelected();
+
+};
+
+mcEditorDeleteButton.onclick=()=>{
+
+mcEditorDeleteSelected();
+
+};
+
+mcEditorNewFileButton.onclick=()=>{
+
+mcEditorCreateNewFile();
+
+};
+
+mcEditorNewJsonButton.onclick=()=>{
+
+mcEditorCreateNewJson();
+
+};
+
+mcEditorUploadButton.onclick=()=>{
+
+mcEditorNewFileInput.click();
+
+};
+
+mcEditorDeselectButton.onclick=()=>{
+
+mcEditorDeselect();
+
+};
+
+if(mcEditorNewFileInput){
+
+mcEditorNewFileInput.addEventListener(
+"change",
+async()=>{
+
+if(mcEditorNewFileInput.files.length){
+
+await mcEditorUploadFiles(
+[...mcEditorNewFileInput.files]
+);
+
+}
+
+mcEditorNewFileInput.value="";
+
+}
+);
+
+}
+
+mcEditorFileDownloadButton.onclick=async()=>{
+
+try{
+
+await mcEditorDownloadSelectedFile();
+
+}catch(error){
+
+alert("ファイルの書き出しに失敗しました。\n\n"+error.message);
+
+}
+
+};
+
+mcEditorZipButton.onclick=async()=>{
+
+try{
+
+if(!mcEditorZip){
+
+alert("編集するファイルが読み込まれていません。");
+
+return;
+
+}
+
+const blob=await mcEditorMakeZip();
+
+if(!blob){
+
+alert("ZIPの生成に失敗しました。");
+
+return;
+
+}
+
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+
+a.href=url;
+a.download=
+mcEditorOutputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+)+".zip";
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>{
+
+URL.revokeObjectURL(url);
+
+},1000);
+
+}catch(error){
+
+alert("ZIPの書き出しに失敗しました。\n\n"+error.message);
+
+}
+
+};
+
+mcEditorMcpackButton.onclick=async()=>{
+
+try{
+
+if(!mcEditorZip){
+
+alert("編集するファイルが読み込まれていません。");
+
+return;
+
+}
+
+const blob=await mcEditorMakeZip();
+
+if(!blob){
+
+alert("パックの生成に失敗しました。");
+
+return;
+
+}
+
+let name=mcEditorOutputName.replace(
+/\.(mcaddon|mcpack|zip)$/i,
+""
+);
+
+if(!name){
+
+name="edited";
+
+}
+
+const url=URL.createObjectURL(blob);
+
+const a=document.createElement("a");
+
+a.href=url;
+a.download=
+name+(mcEditorAddonDetected?".mcaddon":".mcpack");
+
+document.body.appendChild(a);
+
+a.click();
+
+a.remove();
+
+setTimeout(()=>{
+
+URL.revokeObjectURL(url);
+
+},1000);
+
+}catch(error){
+
+alert("mcaddon / mcpackの書き出しに失敗しました。\n\n"+error.message);
+
+}
+
+};
+
+document.addEventListener(
+"keydown",
+async e=>{
+
+if(!mcEditorZip||!mcEditorSelectedPath)return;
+
+const tag=
+document.activeElement?.tagName?.toLowerCase();
+
+if(
+tag==="textarea"||
+tag==="input"
+)return;
+
+if(
+e.key==="Delete"||
+e.key==="Backspace"
+){
+
+e.preventDefault();
+
+await mcEditorDeleteSelected();
+
+}
+
+}
+);
+
+window.addEventListener(
+"beforeunload",
+()=>{
+
+mcEditorClearImageUrl();
+
+}
+);
+
+</script>
+
+</body>
+</html>
